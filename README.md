@@ -9,23 +9,23 @@ The final work for programming language
 ## What we need to finish
 ### Definition 1(semantic)
 #### 方佳滨
-- [ ]aexp
-- [ ]astep  
+- aexp
+- astep  
 
 #### 李晓
-- [ ]bexp
-- [ ]bstep
+- bexp
+- bstep
 
 #### 徐子涵
-- [ ]Notation
-- [ ]aeval
+- Notation
+- aeval
 
 #### 杨晨宇
-- [ ]beval
-- [ ]com
+- beval
+- com
 
 #### 况羿
-- [ ]cstep
-- [ ]ceval
+- cstep
+- ceval
 
 ### Definition 2(hoare logic)
