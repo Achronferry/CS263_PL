@@ -107,6 +107,7 @@ Fixpoint ceval (c: com): state -> exit_kind -> state -> Prop :=
   | CIf b c1 c2 => if_sem b (ceval c1) (ceval c2)
   | CWhile b c => loop_sem1 b (ceval c)
   | CDoWhile c b => loop_sem2 b (ceval c)
+  | CFor c1 b c2 c3 => CSeq c1 (CWhile b (CSeq c2 c3))
   | CBreak => break_sem
   | CCont => cont_sem
   end.
