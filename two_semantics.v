@@ -1,6 +1,6 @@
 
 Module Denotation_With_ControlFlow.
-(* Three different kinds of exit condition. *)
+
 Inductive exit_kind: Type :=
   | EK_Normal
   | EK_Break
@@ -38,7 +38,7 @@ Definition if_sem (b: bexp) (d1 d2: state -> exit_kind -> state -> Prop)
     (d1 st1 ek st2 /\ beval b st1) \/
     (d2 st1 ek st2 /\ ~beval b st1).
 
-Fixpoint iter_loop_body1
+Fixpoint iter_loop_body
   (b: bexp)
   (loop_body: state -> exit_kind -> state -> Prop)
   (n: nat)
@@ -60,44 +60,11 @@ Fixpoint iter_loop_body1
        beval b st1
   end.
 
-Definition loop_sem1 (b: bexp) (loop_body: state -> exit_kind -> state -> Prop)
+Definition loop_sem (b: bexp) (loop_body: state -> exit_kind -> state -> Prop)
   : state -> exit_kind -> state -> Prop
 :=
   fun st1 ek st2 =>
     exists n, (iter_loop_body1 b loop_body n) st1 st2 /\ ek = EK_Normal.
-
-Fixpoint iter_loop_body2
-  (b: bexp)
-  (loop_body: state -> exit_kind -> state -> Prop)
-  (n: nat)
-  : state -> state -> Prop
-:=
-  match n with
-  | 1%nat =>
-     fun st1 st2 =>
-       ((loop_body) st1 EK_Normal st2 \/
-       (loop_body) st1 EK_Break st2 \/
-       (loop_body) st1 EK_Cont st2) /\
-       ~beval b st1
-  | S n' =>
-     fun st1 st3 =>
-      ((exists st2,
-         (loop_body) st1 EK_Normal st2 /\
-         (iter_loop_body b loop_body n') st2 st3) \/
-       (loop_body) st1 EK_Break st3 \/
-       (exists st2,
-         (loop_body) st1 EK_Cont st2 /\
-         (iter_loop_body b loop_body n') st2 st3)) /\
-       beval b st1
-  end.
-
-
-Definition loop_sem2 (b: bexp) (loop_body: state -> exit_kind -> state -> Prop)
-  : state -> exit_kind -> state -> Prop
-:=
-  fun st1 ek st2 =>
-    exists n, (iter_loop_body2 b loop_body n) st1 st2 /\ ek = EK_Normal.
-
 
 Fixpoint ceval (c: com): state -> exit_kind -> state -> Prop :=
   match c with
@@ -105,9 +72,9 @@ Fixpoint ceval (c: com): state -> exit_kind -> state -> Prop :=
   | CAss X E => asgn_sem X E
   | CSeq c1 c2 => seq_sem (ceval c1) (ceval c2)
   | CIf b c1 c2 => if_sem b (ceval c1) (ceval c2)
-  | CWhile b c => loop_sem1 b (ceval c)
-  | CDoWhile c b => loop_sem2 b (ceval c)
-  | CFor c1 b c2 c3 => CSeq c1 (CWhile b (CSeq c2 c3))
+  | CWhile b c => loop_sem b (ceval c)
+  | CDoWhile c b => seq_sem (ceval c) (loop_sem b (ceval c))
+  | CFor c1 b c2 c3 => seq_sem (ceval c1) (loop_sem b (seq_sem (ceval c2) (ceval c3)))
   | CBreak => break_sem
   | CCont => cont_sem
   end.
@@ -133,6 +100,8 @@ Inductive start_with_cont: com -> Prop :=
 
 Inductive start_with_loop: com -> bexp -> com -> com -> Prop :=
 | SWL_While: forall b c, start_with_loop (CWhile b c) b c CSkip
+| SWL_DoWhile :forall b c, start_with_loop (CDoWhile c b) b c c
+| SWL_For : forall b c1 c2 c3, start_with_loop (CFor c1 b c2 c3) BTrue c1 (CWhile b (CSeq c2 c3))
 | SWL_Seq: forall c1 b c11 c12 c2,
              start_with_loop c1 b c11 c12 ->
              start_with_loop (CSeq c1 c2) b c11 (CSeq c12 c2).
@@ -203,6 +172,7 @@ Inductive cstep : (com' * state) -> (com' * state) -> Prop :=
         (CNormal s c2, st)
 
 
+(* Because the definition of SWL_DoWhile,this part is the same with CS_while. *)
   | CS_DoWhile : forall st s c b c1 c2,
       start_with_loop c b c1 c2 ->
       cstep
@@ -220,7 +190,28 @@ Inductive cstep : (com' * state) -> (com' * state) -> Prop :=
   | CS_DoWhileFalse : forall st s b c1 c2,
       cstep
         (CLoopCond (cons (b, c1, c2) s) BFalse, st)
-        (CNormal s (CSeq c1 c2), st)
+        (CNormal s c2, st)
+
+
+(* Because the definition of SWL_For,this part is the same with CS_while. *)
+  | CS_For : forall st s c b c1 c2,
+      start_with_loop c b c1 c2 ->
+      cstep
+        (CNormal s c, st)
+        (CLoopCond (cons (b, c1, c2) s) b, st)
+  | CS_ForStep : forall st s b b' b'' c1 c2,
+      bstep st b' b'' ->
+      cstep
+        (CLoopCond (cons (b, c1, c2) s) b', st)
+        (CLoopCond (cons (b, c1, c2) s) b'', st)
+  | CS_ForTrue : forall st s b c1 c2,
+      cstep
+        (CLoopCond (cons (b, c1, c2) s) BTrue, st)
+        (CNormal (cons (b, c1, c2) s) c1, st)
+  | CS_ForFalse : forall st s b c1 c2,
+      cstep
+        (CLoopCond (cons (b, c1, c2) s) BFalse, st)
+        (CNormal s c2, st)
 
 
   | CS_Skip : forall st s b c1 c2,
