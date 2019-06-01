@@ -61,7 +61,8 @@ Inductive com : Type :=
   | CWhile (b : bexp) (c : com)
   | CBreak                       (* <--- new *)
   | CCont                        (* <--- new *)
-  | CFor  (c1 : com)(b : bexp) (c2 c3: com).
+  | CFor  (c1 : com)(b : bexp) (c2 c3: com)
+  | CDoWhile   (c : com) (b : bexp).
 
 Definition skip_sem: state -> exit_kind -> state -> Prop :=
   fun st1 ek st2 =>
@@ -133,6 +134,7 @@ Definition loop_sem (b: bexp) (loop_body: state -> exit_kind -> state -> Prop)
   fun st1 ek st2 =>
     exists n, (iter_loop_body b loop_body n) st1 st2 /\ ek = EK_Normal.
 
+(*
 Fixpoint ceval (c: com): state -> exit_kind -> state -> Prop :=
   match c with
   | CSkip => skip_sem
@@ -144,4 +146,6 @@ Fixpoint ceval (c: com): state -> exit_kind -> state -> Prop :=
   | CCont => cont_sem
   (*| CFor c1 b c2 =>break_sem*)
   | CFor c1 b c2 c3=>seq_sem (ceval c1) (loop_sem b (seq_sem (ceval c2) (ceval c3)))
+  | CDoWhile  c b=>seq_sem (ceval c) ( loop_sem b (ceval c))
   end.
+*)
