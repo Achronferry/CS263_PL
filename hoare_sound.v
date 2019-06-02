@@ -146,10 +146,16 @@ Proof.
     - exact H2.
 Qed.
 
-Lemma Assertion_sub_spec: forall st1 st2 La (P: Assertion) (X: var) (E: aexp'),
+Lemma Assertion_sub_spec: forall st1 st2 La (P: Assertion) (X: var) (E: aexp),
   st2 X = aexp'_denote (st1, La) E ->
   (forall Y : var, X <> Y -> st1 Y = st2 Y) ->
   ((st1, La) |== P[ X |-> E]) <-> ((st2, La) |== P).
+Proof.
+  intros.
+  split;intros.
+  + rewrite <- aeval_aexp'_denote in H.
+    
+
 (* FILL IN HERE *) Admitted.
 
 Lemma hoare_asgn_bwd_sound : forall P (X: var) (E: aexp),
@@ -161,7 +167,7 @@ Proof.
   destruct H0.
   pose proof aeval_aexp'_denote st1 La E.
   rewrite H2 in H0.
-  pose proof Assertion_sub_spec st1 st2 _ P _ _ H0 H1.
+  pose proof Assertion_sub_spec st1 st2 La P X E H0 H1.
   tauto.
 Qed.
 

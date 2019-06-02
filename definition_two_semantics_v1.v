@@ -224,7 +224,7 @@ Notation "'If' c1 'Then' c2 'Else' c3 'EndIf'" :=
   (CIf c1 c2 c3) (at level 10, right associativity) : imp_scope.
 Notation "'Do' c 'While' b 'EndWhile'" :=
   (CDoWhile c b) (at level 80, right associativity) : imp_scope.
-Notation "'For(' b ';' c2 ';' c3 ')' c1 'EndFor'":=
+Notation "'For(' c1 ';' b ';' c2 ')' c3 'EndFor'" :=
   (CFor c1 b c2 c3 )(at level 80, right associativity) : imp_scope.
 Notation "'Continue'":=
   (CCont)(at level 80, right associativity) : imp_scope.
@@ -279,11 +279,11 @@ Fixpoint iter_loop_body1
      fun st1 st3 =>
       ((exists st2,
          (loop_body) st1 EK_Normal st2 /\
-         (iter_loop_body b loop_body n') st2 st3) \/
+         (iter_loop_body1 b loop_body n') st2 st3) \/
        (loop_body) st1 EK_Break st3 \/
        (exists st2,
          (loop_body) st1 EK_Cont st2 /\
-         (iter_loop_body b loop_body n') st2 st3)) /\
+         (iter_loop_body1 b loop_body n') st2 st3)) /\
        beval b st1
   end.
 
@@ -300,7 +300,7 @@ Fixpoint iter_loop_body2
   : state -> state -> Prop
 :=
   match n with
-  | 1%nat =>
+  | O =>
      fun st1 st2 =>
        ((loop_body) st1 EK_Normal st2 /\ ~beval b st2)\/
        (loop_body) st1 EK_Break st2 \/
@@ -309,12 +309,12 @@ Fixpoint iter_loop_body2
      fun st1 st3 =>
       ((exists st2,
          (loop_body) st1 EK_Normal st2 /\
-         (iter_loop_body b loop_body n') st2 st3) \/
+         (iter_loop_body2 b loop_body n') st2 st3) \/
        (loop_body) st1 EK_Break st3 \/
        (exists st2,
          (loop_body) st1 EK_Cont st2 /\
-         (iter_loop_body b loop_body n') st2 st3)) /\
-       beval b st1
+         (iter_loop_body2 b loop_body n') st2 st3)) /\
+       beval b st3
   end.
 
 Definition loop_sem2 (b: bexp) (loop_body: state -> exit_kind -> state -> Prop)
@@ -322,6 +322,38 @@ Definition loop_sem2 (b: bexp) (loop_body: state -> exit_kind -> state -> Prop)
 :=
   fun st1 ek st2 =>
     exists n, (iter_loop_body2 b loop_body n) st1 st2 /\ ek = EK_Normal.
+
+Fixpoint iter_loop_body3
+  (b: bexp)
+  (loop_body: state -> exit_kind -> state -> Prop)
+  (variant: state -> exit_kind -> state -> Prop)
+  (n: nat)
+  : state -> state -> Prop
+:=
+  match n with
+  | O =>
+     fun st1 st2 =>
+       st1 = st2 /\ ~beval b st1
+  | S n' =>
+     fun st1 st4 =>
+      ((exists st2 st3,
+         (loop_body) st1 EK_Normal st2 /\
+         (variant) st2 EK_Normal st3 /\
+         (iter_loop_body3 b loop_body variant n') st3 st4) \/
+       (loop_body) st1 EK_Break st4 \/
+       (exists st2 st3,
+         (loop_body) st1 EK_Cont st2 /\
+         (variant) st2 EK_Normal st3 /\
+         (iter_loop_body3 b loop_body variant n') st3 st4)) /\
+       beval b st1
+  end.
+
+Definition loop_sem3 (b: bexp) (loop_body: state -> exit_kind -> state -> Prop) (variant: state -> exit_kind -> state -> Prop)
+  : state -> exit_kind -> state -> Prop
+:=
+  fun st1 ek st2 =>
+    exists n, (iter_loop_body3 b loop_body (variant: state -> exit_kind -> state -> Prop) n) st1 st2 /\ ek = EK_Normal.
+
 
 
 Fixpoint ceval (c: com): state -> exit_kind -> state -> Prop :=
@@ -331,8 +363,8 @@ Fixpoint ceval (c: com): state -> exit_kind -> state -> Prop :=
   | CSeq c1 c2 => seq_sem (ceval c1) (ceval c2)
   | CIf b c1 c2 => if_sem b (ceval c1) (ceval c2)
   | CWhile b c => loop_sem1 b (ceval c)
-  | CDoWhile c b => seq_sem (ceval c) (loop_sem b (ceval c))
-  | CFor c1 b c2 c3 => seq_sem (ceval c1) (loop_sem1 b (seq_sem (ceval c2) (ceval c3)))
+  | CDoWhile c b => seq_sem (ceval c) (loop_sem2 b (ceval c))
+  | CFor c1 b c2 c3 => seq_sem (ceval c1) (loop_sem3 b (ceval c3) (ceval c2))
   | CBreak => break_sem
   | CCont => cont_sem
   end.
