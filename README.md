@@ -7,25 +7,34 @@ The final work for programming language
 > You should first define a Hoare logic, a denotational semantics and a small step semantics for a programming language with break and continue. Then you need to prove the equivalence between small step semantics and denotational semantics. Also, you should prove the soundness theorem of Hoare logic.
 
 ## What we need to finish
-### Definition 1(semantic)
-#### 方佳滨
-- aexp
-- astep  
+### Definition 1(two semantics)
+- [x] ~~aexp~~
+- [x] ~~astep~~  
 
-#### 李晓
-- bexp
-- bstep
+- [x] ~~bexp~~
+- [x] ~~bstep~~
 
-#### 徐子涵
-- Notation
-- aeval
+- [x] ~~notation~~
 
-#### 杨晨宇
-- beval
-- com
+- [x] ~~aeval~~
 
-#### 况羿
-- cstep
-- ceval
+- [x] ~~beval~~
+- [x] ~~com~~
+
+- [x] ~~cstep~~
+- [x] ~~ceval~~
 
 ### Definition 2(hoare logic)
+
+- [ ] hoare_while
+- [ ] hoare_break
+- [ ] hoare_continue
+
+### Contributer
+
+- [Jiabing Fang](https://github.com/Bagusutar)
+- [Xiao Li](https://github.com/shjdlx)
+- [Chenyu Yang](https://github.com/Achronferry)
+- [Hanzi Xu](https://github.com/madcpt)
+- [Yi Kuang](https://github.com/Schemeer)
+
