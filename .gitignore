@@ -1,3 +1,6 @@
-﻿*.tmp
+﻿*.glob
+*.vo
+.*.aux
+*.tmp
 ~$*
 bin
