@@ -62,7 +62,7 @@ Inductive com : Type :=
   | CBreak                       (* <--- new *)
   | CCont                        (* <--- new *)
   | CFor  (c1 : com)(b : bexp) (c2 c3: com)
-  | CDoWhile   (c : com) (b : bexp).
+  | CDoWhile  (c : com) (b : bexp) .
 
 Definition skip_sem: state -> exit_kind -> state -> Prop :=
   fun st1 ek st2 =>
