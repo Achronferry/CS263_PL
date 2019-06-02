@@ -226,6 +226,11 @@ Notation "'Do' c 'While' b 'EndWhile'" :=
   (CDoWhile c b) (at level 80, right associativity) : imp_scope.
 Notation "'For(' b ';' c2 ';' c3 ')' c1 'EndFor'":=
   (CFor c1 b c2 c3 )(at level 80, right associativity) : imp_scope.
+Notation "'Continue'":=
+  (CCont)(at level 80, right associativity) : imp_scope.
+Notation "'Break'":=
+  (CBreak)(at level 80, right associativity) : imp_scope.
+
 
 
 Definition skip_sem: state -> exit_kind -> state -> Prop :=
