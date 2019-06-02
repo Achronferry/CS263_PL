@@ -1,4 +1,3 @@
-
 Module Denotation_With_ControlFlow.
 
 Inductive exit_kind: Type :=
