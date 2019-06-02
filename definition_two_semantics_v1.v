@@ -265,7 +265,7 @@ Definition if_sem (b: bexp) (d1 d2: state -> exit_kind -> state -> Prop)
     (d1 st1 ek st2 /\ beval b st1) \/
     (d2 st1 ek st2 /\ ~beval b st1).
 
-Fixpoint iter_loop_body
+Fixpoint iter_loop_body1
   (b: bexp)
   (loop_body: state -> exit_kind -> state -> Prop)
   (n: nat)
@@ -287,11 +287,42 @@ Fixpoint iter_loop_body
        beval b st1
   end.
 
-Definition loop_sem (b: bexp) (loop_body: state -> exit_kind -> state -> Prop)
+Definition loop_sem1 (b: bexp) (loop_body: state -> exit_kind -> state -> Prop)
   : state -> exit_kind -> state -> Prop
 :=
   fun st1 ek st2 =>
-    exists n, (iter_loop_body b loop_body n) st1 st2 /\ ek = EK_Normal.
+    exists n, (iter_loop_body1 b loop_body n) st1 st2 /\ ek = EK_Normal.
+
+Fixpoint iter_loop_body2
+  (b: bexp)
+  (loop_body: state -> exit_kind -> state -> Prop)
+  (n: nat)
+  : state -> state -> Prop
+:=
+  match n with
+  | 1%nat =>
+     fun st1 st2 =>
+       ((loop_body) st1 EK_Normal st2 /\ ~beval b st2)\/
+       (loop_body) st1 EK_Break st2 \/
+       ((loop_body) st1 EK_Cont st2 /\ ~beval b st2)
+  | S n' =>
+     fun st1 st3 =>
+      ((exists st2,
+         (loop_body) st1 EK_Normal st2 /\
+         (iter_loop_body b loop_body n') st2 st3) \/
+       (loop_body) st1 EK_Break st3 \/
+       (exists st2,
+         (loop_body) st1 EK_Cont st2 /\
+         (iter_loop_body b loop_body n') st2 st3)) /\
+       beval b st1
+  end.
+
+Definition loop_sem2 (b: bexp) (loop_body: state -> exit_kind -> state -> Prop)
+  : state -> exit_kind -> state -> Prop
+:=
+  fun st1 ek st2 =>
+    exists n, (iter_loop_body2 b loop_body n) st1 st2 /\ ek = EK_Normal.
+
 
 Fixpoint ceval (c: com): state -> exit_kind -> state -> Prop :=
   match c with
@@ -299,9 +330,9 @@ Fixpoint ceval (c: com): state -> exit_kind -> state -> Prop :=
   | CAss X E => asgn_sem X E
   | CSeq c1 c2 => seq_sem (ceval c1) (ceval c2)
   | CIf b c1 c2 => if_sem b (ceval c1) (ceval c2)
-  | CWhile b c => loop_sem b (ceval c)
+  | CWhile b c => loop_sem1 b (ceval c)
   | CDoWhile c b => seq_sem (ceval c) (loop_sem b (ceval c))
-  | CFor c1 b c2 c3 => seq_sem (ceval c1) (loop_sem b (seq_sem (ceval c2) (ceval c3)))
+  | CFor c1 b c2 c3 => seq_sem (ceval c1) (loop_sem1 b (seq_sem (ceval c2) (ceval c3)))
   | CBreak => break_sem
   | CCont => cont_sem
   end.

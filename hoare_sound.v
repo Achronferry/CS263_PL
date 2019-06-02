@@ -8,6 +8,40 @@ Import Abstract_Pretty_Printing.
 (** We will prove Hoare logic's soundness today. Recall that a Hoare logic is
 sound when all provable Hoare triples are valid. *)
 
+Lemma aeval_aexp'_denote: forall st La a,
+  aeval a st = aexp'_denote (st, La) (ainj a).
+Proof.
+  intros.
+  induction a; simpl.
+  + reflexivity.
+  + reflexivity.
+  + rewrite IHa1, IHa2.
+    reflexivity.
+  + rewrite IHa1, IHa2.
+    reflexivity.
+  + rewrite IHa1, IHa2.
+    reflexivity.
+Qed.
+
+Lemma beval_bexp'_denote: forall st La b,
+  beval b st <-> bexp'_denote (st, La) (binj b).
+Proof.
+  intros.
+  induction b; simpl.
+  + tauto.
+  + tauto.
+  + rewrite <- aeval_aexp'_denote.
+    rewrite <- aeval_aexp'_denote.
+    tauto.
+  + rewrite <- aeval_aexp'_denote.
+    rewrite <- aeval_aexp'_denote.
+    tauto.
+  + tauto.
+  + tauto.
+Qed.
+
+
+
 Definition hoare_sound (T: FirstOrderLogic): Prop :=
   forall P c Q,
     |-- {{ P }} c {{ Q }} ->
