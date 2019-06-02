@@ -1,3 +1,6 @@
+<<<<<<< HEAD
+Module Denotation_With_ControlFlow.
+=======
 Require Import Coq.Relations.Relation_Operators.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.Relations.Relation_Operators.
@@ -180,6 +183,7 @@ Inductive bstep : state -> bexp -> bexp -> Prop :=
   | BS_AndFalse : forall st b,
       bstep st
        (BAnd BFalse b) BFalse.
+>>>>>>> 21e40a9112df2d1a5416f61fb9d163c0217f9626
 
 Inductive exit_kind: Type :=
   | EK_Normal

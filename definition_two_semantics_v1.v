@@ -30,6 +30,18 @@ Inductive bexp : Type :=
   | BNot (b : bexp)
   | BAnd (b1 b2 : bexp).
 
+Bind Scope imp_scope with aexp.
+Bind Scope imp_scope with bexp.
+Delimit Scope imp_scope with imp.
+
+Notation "x + y" := (APlus x y) (at level 50, left associativity) : imp_scope.
+Notation "x - y" := (AMinus x y) (at level 50, left associativity) : imp_scope.
+Notation "x * y" := (AMult x y) (at level 40, left associativity) : imp_scope.
+Notation "x <= y" := (BLe x y) (at level 70, no associativity) : imp_scope.
+Notation "x == y" := (BEq x y) (at level 70, no associativity) : imp_scope.
+Notation "x && y" := (BAnd x y) (at level 40, left associativity) : imp_scope.
+Notation "'!' b" := (BNot b) (at level 39, right associativity) : imp_scope.
+
 Fixpoint aeval (a : aexp) (st : state) : Z :=
   match a with
   | ANum n => n
@@ -198,8 +210,22 @@ Inductive com : Type :=
   | CWhile (b : bexp) (c : com)
   | CBreak                       (* <--- new *)
   | CCont                        (* <--- new *)
-  | CFor  (c1 : com)(b : bexp) (c2 c3: com)
+  | CFor  (c1 : com)(b : bexp) (c2 : com) (c3: com)
   | CDoWhile   (c : com) (b : bexp).
+
+Bind Scope imp_scope with com.
+Notation "'Skip'" :=
+   CSkip : imp_scope.
+Notation "c1 ;; c2" :=
+  (CSeq c1 c2) (at level 80, right associativity) : imp_scope.
+Notation "'While' b 'Do' c 'EndWhile'" :=
+  (CWhile b c) (at level 80, right associativity) : imp_scope.
+Notation "'If' c1 'Then' c2 'Else' c3 'EndIf'" :=
+  (CIf c1 c2 c3) (at level 10, right associativity) : imp_scope.
+Notation "'Do' c 'While' b 'EndWhile'" :=
+  (CDoWhile c b) (at level 80, right associativity) : imp_scope.
+Notation "'For(' b ';' c2 ';' c3 ')' c1 'EndFor'":=
+  (CFor c1 b c2 c3 )(at level 80, right associativity) : imp_scope.
 
 
 Definition skip_sem: state -> exit_kind -> state -> Prop :=
