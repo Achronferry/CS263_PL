@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-Module Denotation_With_ControlFlow.
-=======
 Require Import Coq.Relations.Relation_Operators.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.Relations.Relation_Operators.
@@ -12,10 +9,7 @@ Require Export Coq.Logic.Classical.
 
 Definition var: Type := nat.
 Definition state: Type := nat -> Z.
-Coercion ANum : Z >-> aexp.
-Definition bool_to_bexp (b : bool) : bexp :=
-  if b then BTrue else BFalse.
-Coercion bool_to_bexp : bool >-> bexp.
+
 
 Open Scope Z.
 
@@ -25,6 +19,8 @@ Inductive aexp : Type :=
   | APlus (a1 a2 : aexp)
   | AMinus (a1 a2 : aexp)
   | AMult (a1 a2 : aexp).
+
+Coercion ANum : Z >-> aexp.
 
 Inductive bexp : Type :=
   | BTrue
@@ -49,8 +45,6 @@ Definition aexp_dequiv (d1 d2: state -> Z): Prop :=
 Definition aexp_equiv (a1 a2: aexp): Prop :=
   aexp_dequiv (aeval a1) (aeval a2).
 
-
-
 Fixpoint beval (b : bexp) (st : state) : Prop :=
   match b with
   | BTrue       => True
@@ -60,6 +54,12 @@ Fixpoint beval (b : bexp) (st : state) : Prop :=
   | BNot b1     => ~ (beval b1 st)
   | BAnd b1 b2  => (beval b1 st) /\ (beval b2 st)
   end.
+
+
+
+Definition bool_to_bexp (b : bool) : bexp :=
+  if b then BTrue else BFalse.
+Coercion bool_to_bexp : bool >-> bexp.
 
 Inductive aexp_halt: aexp -> Prop :=
   | AH_num : forall n, aexp_halt (ANum n).
@@ -183,7 +183,6 @@ Inductive bstep : state -> bexp -> bexp -> Prop :=
   | BS_AndFalse : forall st b,
       bstep st
        (BAnd BFalse b) BFalse.
->>>>>>> 21e40a9112df2d1a5416f61fb9d163c0217f9626
 
 Inductive exit_kind: Type :=
   | EK_Normal
@@ -200,7 +199,7 @@ Inductive com : Type :=
   | CBreak                       (* <--- new *)
   | CCont                        (* <--- new *)
   | CFor  (c1 : com)(b : bexp) (c2 c3: com)
-  | CDoWhile  (b : bexp) (c : com) .
+  | CDoWhile   (c : com) (b : bexp).
 
 
 Definition skip_sem: state -> exit_kind -> state -> Prop :=
@@ -261,7 +260,7 @@ Definition loop_sem (b: bexp) (loop_body: state -> exit_kind -> state -> Prop)
   : state -> exit_kind -> state -> Prop
 :=
   fun st1 ek st2 =>
-    exists n, (iter_loop_body1 b loop_body n) st1 st2 /\ ek = EK_Normal.
+    exists n, (iter_loop_body b loop_body n) st1 st2 /\ ek = EK_Normal.
 
 Fixpoint ceval (c: com): state -> exit_kind -> state -> Prop :=
   match c with
