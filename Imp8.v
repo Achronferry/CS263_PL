@@ -1845,8 +1845,7 @@ Definition derives {T: FirstOrderLogic} (P Q: Assertion): Prop :=
 
 Notation "P '|--' Q" :=
   (derives ((P)%assert) ((Q)%assert)) (at level 90, no associativity).
-
-
+  
 
 Inductive provable {T: FirstOrderLogic}: hoare_triple -> Prop :=
   | hoare_seq : forall (P Q R RB RC: Assertion) (c1 c2: com),
@@ -1854,16 +1853,16 @@ Inductive provable {T: FirstOrderLogic}: hoare_triple -> Prop :=
       provable ({{Q}} c2 {{R}} {{RB}} {{RC}}) ->
       provable ({{P}} CSeq c1 c2 {{R}} {{RB}} {{RC}})
   | hoare_skip : forall P,
-      provable ({{P}} CSkip {{P}} {{P}} {{P}})
-  | hoare_if : forall P Q QB QC b c1 c2,
+      provable ({{P}} CSkip {{P}} {{{[BFalse]}}} {{{[BFalse]}}})
+  | hoare_if : forall P Q QB QC (b:bexp) c1 c2,
       provable ({{ P AND {[b]} }} c1 {{Q}} {{QB}} {{QC}}) ->
       provable ({{ P AND NOT {[b]} }} c2 {{Q}} {{QB}} {{QC}}) ->
       provable ({{ P }} CIf b c1 c2 {{Q}} {{QB}} {{QC}})
-  | hoare_while : forall I P b c,
+  | hoare_while : forall I P (b:bexp) c,
       provable ({{ I AND {[b]} }} c {{I}} {{P}} {{I}}) ->
-      provable ({{ I }} CWhile b c {{ P OR (I AND NOT {[b]}) }} {{False}} {{False }})
-  | hoare_asgn_bwd : forall P (X: var) E,
-      provable ({{ P [ X |-> E] }} CAss X E {{ P }} {{False}} {{False}})
+      provable ({{ I }} CWhile b c {{ P OR (I AND NOT {[b]}) }} {{{[BFalse]}}} {{{[BFalse]}}})
+  | hoare_asgn_bwd : forall P (X: var) (E:aexp),
+      provable ({{ P [ X |-> E] }} CAss X E {{ P }} {{{[BFalse]}}} {{{[BFalse]}}})
   | hoare_consequence : forall (P P' Q Q' QB QB' QC QC' : Assertion) c,
       P |-- P' ->
       provable ({{P'}} c {{Q'}} {{QB'}} {{QC'}})->
@@ -1872,9 +1871,9 @@ Inductive provable {T: FirstOrderLogic}: hoare_triple -> Prop :=
       QC' |-- QC ->
       provable ({{P}} c {{Q}} {{QB}} {{QC}})
   | hoare_cont : forall P,
-      provable ({{P}} CSkip {{False}} {{False}} {{P}})
+      provable ({{P}} CSkip {{{[BFalse]}}} {{{[BFalse]}}} {{P}})
   | hoare_break : forall P,
-      provable ({{P}} CSkip {{False}} {{P}} {{False}})
+      provable ({{P}} CSkip {{{[BFalse]}}}  {{P}} {{{[BFalse]}}})
 .
 
 Notation "|--  tr" := (provable tr) (at level 91, no associativity).
@@ -1935,7 +1934,7 @@ Notation "J  |==  x" := (satisfies J x) (at level 90, no associativity).
 
 Definition valid (Tr: hoare_triple): Prop :=
   match Tr with
-  | Build_hoare_triple P c Q =>
+  | Build_hoare_triple P c Q QB QC =>
       forall La st1 st2 EK,
         (st1, La) |== P -> ceval c st1 EK st2 -> (st2, La) |== Q
   end.
