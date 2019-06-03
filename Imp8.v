@@ -793,16 +793,24 @@ Opaque derives.
 Definition equiv_assert (P Q: Assertion): Prop :=
   derives P Q /\ derives Q P.
 
-Parameter hoare_triple: Assertion -> com -> Assertion -> Prop.
-
+Parameter hoare_triple: Assertion ->
+                         com ->
+                         Assertion *  (* Normal Postcondition *)
+                         Assertion *  (* Break  Postcondition *)
+                         Assertion ->  (* Continue Condition *)
+                         Prop.
 Notation "P '|--' Q" :=
   (derives ((P)%assert) ((Q)%assert)) (at level 90, no associativity).
 
 Notation "P '--||--' Q" :=
   (equiv_assert P Q) (at level 90, no associativity).
 
-Notation "{{ P }}  c  {{ Q }}" :=
-  (hoare_triple P c Q) (at level 90, c at next level).
+Notation "{{ P }}  c  {{ Q }} {{ QB }} {{ QC }}" :=
+  (hoare_triple
+     P
+     c
+     (Q%assert: Assertion, QB%assert: Assertion, QC%assert: Assertion))
+  (at level 90, c at next level).
 
 Theorem FOL_complete: forall d1 d2: Assertion,
   (forall st, Assertion_denote st d1 -> Assertion_denote st d2) ->
@@ -918,14 +926,14 @@ End simpl.
 Axiom simpl_derives: forall P Q,
   P |-- Q <-> assn_simpl P |-- assn_simpl Q.
 
-Axiom simpl_triple: forall P c Q,
-  {{P}} c {{Q}} <-> {{assn_simpl P}} c {{assn_simpl Q}}.
+Axiom simpl_triple: forall P c Q QB QC,
+  {{P}} c {{Q}}{{ QB }} {{ QC }} <-> {{assn_simpl P}} c {{assn_simpl Q}}{{assn_simpl QB }} {{assn_simpl QC }}.
 
 Axiom elim_trivial_ex_derives: forall P Q P' Q',
   elim_trivial_ex P P' -> elim_trivial_ex Q  Q' -> (P |-- Q <-> P' |-- Q').
 
-Axiom elim_trivial_ex_triple: forall P c Q P' Q',
-  elim_trivial_ex P P' -> elim_trivial_ex Q  Q' -> ({{P}} c {{Q}} <-> {{P'}} c {{Q'}}).
+Axiom elim_trivial_ex_triple: forall P c Q P' Q' QB QC QB' QC',
+  elim_trivial_ex P P' -> elim_trivial_ex Q  Q' -> ({{P}} c {{Q}} {{ QB }} {{ QC }}<-> {{P'}} c {{Q'}}{{ QB' }} {{ QC' }}).
 
 End Assertion_S.
 
@@ -1122,7 +1130,7 @@ Tactic Notation "assert_subst" "in" constr(H) :=
 
 Ltac assert_simpl_concl :=
   match goal with
-  | |- {{ _ }} _ {{ _ }} =>
+  | |- {{ _ }} _ {{ _ }} {{ _ }} {{ _ }}=>
       rewrite simpl_triple;
       simpl assn_simpl
   | |- _ |-- _ =>
@@ -1137,7 +1145,7 @@ Ltac assert_simpl_concl :=
 
 Ltac assert_simpl_assu H :=
   match type of H with
-  | {{ _ }} _ {{ _ }} =>
+  | {{ _ }} _ {{ _ }} {{ _ }} {{ _ }}=>
       rewrite simpl_triple in H;
       simpl assn_simpl in H
   | _ |-- _ =>
@@ -1181,7 +1189,7 @@ Ltac solve_elim_trivial_ex :=
 
 Ltac elim_trivial_ex_concl :=
   match goal with
-  | |- {{ _ }} _ {{ _ }} =>
+  | |- {{ _ }} _ {{ _ }} {{ _ }} {{ _ }}=>
       erewrite elim_trivial_ex_triple;
       [ | solve_elim_trivial_ex ..]
   | |- _ |-- _ =>
@@ -1191,7 +1199,7 @@ Ltac elim_trivial_ex_concl :=
 
 Ltac elim_trivial_ex_assu H :=
   match type of H with
-  | {{ _ }} _ {{ _ }} =>
+  | {{ _ }} _ {{ _ }} {{ _ }} {{ _ }}=>
       erewrite elim_trivial_ex_triple in H;
       [ | solve_elim_trivial_ex ..]
   | _ |-- _ =>
@@ -1225,39 +1233,46 @@ Ltac entailer :=
 End Assertion_S_Tac.
 
 Module Axiomatic_semantics.
-Import Concrete_Pretty_Printing.
+Import Assertion_S.
 
-Axiom hoare_seq : forall (P Q R: Assertion) (c1 c2: com),
-  {{P}} c1 {{Q}} ->
-  {{Q}} c2 {{R}} ->
-  {{P}} c1;;c2 {{R}}.
+Notation "d [ X |-> a ]" := (assn_sub X a ((d)%assert)) (at level 10, X at next level) : assert_scope.
+Notation "a0 [ X |-> a ]" := (aexp_sub X a ((a0)%imp)) (at level 10, X at next level) : imp_scope.
+
+Print Assertion_S.
+
+Axiom hoare_seq : forall (P Q R RB RC: Assertion) (c1 c2: com),
+  {{P}} c1 {{Q}} {{RB}} {{RC}} ->
+  {{Q}} c2 {{R}} {{RB}} {{RC}} ->
+  {{P}} CSeq c1 c2 {{R}} {{RB}} {{RC}}.
 
 Axiom hoare_skip : forall P,
-  {{P}} Skip {{P}}.
+  {{P}} CSkip {{P}} {{False}} {{False}}.
 
-Axiom hoare_if : forall P Q b c1 c2,
-  {{ P AND {[b]} }} c1 {{ Q }} ->
-  {{ P AND NOT {[b]} }} c2 {{ Q }} ->
-  {{ P }} If b Then c1 Else c2 EndIf {{ Q }}.
+Axiom hoare_break : forall P,
+  {{P}} CSkip {{False}} {{P}} {{False}}.
 
-Axiom hoare_while : forall P b c,
-  {{ P AND {[b]} }} c {{P}} ->
-  {{P}} While b Do c EndWhile {{ P AND NOT {[b]} }}.
+Axiom hoare_cont : forall P,
+  {{P}} CSkip {{False}} {{False}} {{P}}.
 
-Axiom hoare_asgn_fwd : forall P `(X: var) E,
-  {{ P }}
-  X ::= E
-  {{ EXISTS x, P [X |-> x] AND
-               {[X]} == {[ E [X |-> x] ]} }}.
+Axiom hoare_if : forall P Q QB QC b c1 c2,
+  {{ P AND {[b]} }} c1 {{Q}} {{QB}} {{QC}} ->
+  {{ P AND NOT {[b]} }} c2 {{Q}} {{QB}} {{QC}} ->
+  {{ P }} CIf b c1 c2 {{Q}} {{QB}} {{QC}}.
 
-Axiom hoare_consequence : forall (P P' Q Q' : Assertion) c,
+Axiom hoare_while : forall I P b c,
+  {{ I AND {[b]} }} c {{I}} {{P}} {{I}} ->
+  {{ I }} CWhile b c {{ P OR (I AND NOT {[b]}) }} {{False}} {{False }}.
+
+Axiom hoare_asgn_bwd : forall P (X: var) E,
+  {{ P [ X |-> E] }} CAss X E {{ P }} {{False}} {{False}}.
+
+Axiom hoare_consequence : forall (P P' Q Q' QB QB' QC QC' : Assertion) c,
   P |-- P' ->
-  {{P'}} c {{Q'}} ->
+  {{P'}} c {{Q'}} {{QB'}} {{QC'}}->
   Q' |-- Q ->
-  {{P}} c {{Q}}.
-
-Axiom hoare_asgn_bwd : forall P `(X: var) E,
-  {{ P [ X |-> E] }} X ::= E {{ P }}.
+  QB' |-- QB ->
+  QC' |-- QC ->
+  {{P}} c {{Q}} {{QB}} {{QC}}.
 
 End Axiomatic_semantics.
 
@@ -1816,10 +1831,10 @@ Notation "d [ X |-> a ]" := (assn_sub X a ((d)%assert)) (at level 10, X at next 
 Notation "a0 [ X |-> a ]" := (aexp_sub X a ((a0)%vimp)) (at level 10, X at next level) : vimp_scope.
 
 Inductive hoare_triple: Type :=
-| Build_hoare_triple (P: Assertion) (c: com) (Q: Assertion).
+| Build_hoare_triple (P: Assertion) (c: com) (Q: Assertion)(QB: Assertion)(QC: Assertion).
 
-Notation "{{ P }}  c  {{ Q }}" :=
-  (Build_hoare_triple P c%imp Q) (at level 90, c at next level).
+Notation "{{ P }}  c  {{ Q }} {{ QB }} {{ QC }}" :=
+  (Build_hoare_triple P c%imp Q QB QC) (at level 90, c at next level).
 
 Class FirstOrderLogic: Type := {
   FOL_provable: Assertion -> Prop
@@ -1831,31 +1846,35 @@ Definition derives {T: FirstOrderLogic} (P Q: Assertion): Prop :=
 Notation "P '|--' Q" :=
   (derives ((P)%assert) ((Q)%assert)) (at level 90, no associativity).
 
+
+
 Inductive provable {T: FirstOrderLogic}: hoare_triple -> Prop :=
-  | hoare_seq : forall (P Q R: Assertion) (c1 c2: com),
-      provable ({{P}} c1 {{Q}}) ->
-      provable ({{Q}} c2 {{R}}) ->
-      provable ({{P}} c1;;c2 {{R}})
+  | hoare_seq : forall (P Q R RB RC: Assertion) (c1 c2: com),
+      provable ({{P}} c1 {{Q}} {{RB}} {{RC}}) ->
+      provable ({{Q}} c2 {{R}} {{RB}} {{RC}}) ->
+      provable ({{P}} CSeq c1 c2 {{R}} {{RB}} {{RC}})
   | hoare_skip : forall P,
-      provable ({{P}} Skip {{P}})
-  | hoare_if : forall P Q (b: bexp) c1 c2,
-      provable ({{ P AND {[b]} }} c1 {{ Q }}) ->
-      provable ({{ P AND NOT {[b]} }} c2 {{ Q }}) ->
-      provable ({{ P }} If b Then c1 Else c2 EndIf {{ Q }})
-  | hoare_while : forall P (b: bexp) c,
-      provable ({{ P AND {[b]} }} c {{P}}) ->
-      provable ({{P}} While b Do c EndWhile {{ P AND NOT {[b]} }})
-  | hoare_asgn_bwd : forall P (X: var) (E: aexp),
-      provable ({{ P [ X |-> E] }} X ::= E {{ P }})
-  | hoare_consequence : forall (P P' Q Q' : Assertion) c,
+      provable ({{P}} CSkip {{P}} {{P}} {{P}})
+  | hoare_if : forall P Q QB QC b c1 c2,
+      provable ({{ P AND {[b]} }} c1 {{Q}} {{QB}} {{QC}}) ->
+      provable ({{ P AND NOT {[b]} }} c2 {{Q}} {{QB}} {{QC}}) ->
+      provable ({{ P }} CIf b c1 c2 {{Q}} {{QB}} {{QC}})
+  | hoare_while : forall I P b c,
+      provable ({{ I AND {[b]} }} c {{I}} {{P}} {{I}}) ->
+      provable ({{ I }} CWhile b c {{ P OR (I AND NOT {[b]}) }} {{False}} {{False }})
+  | hoare_asgn_bwd : forall P (X: var) E,
+      provable ({{ P [ X |-> E] }} CAss X E {{ P }} {{False}} {{False}})
+  | hoare_consequence : forall (P P' Q Q' QB QB' QC QC' : Assertion) c,
       P |-- P' ->
-      provable ({{P'}} c {{Q'}}) ->
+      provable ({{P'}} c {{Q'}} {{QB'}} {{QC'}})->
       Q' |-- Q ->
-      provable ({{P}} c {{Q}})
-  | hoare_while_continue : forall (P Q : Assertion),
-      provable ({{P}} Continue {{P}})
-  | hoare_break : forall (P Q : Assertion),
-      provable ({{P}} Break {{Q}})
+      QB' |-- QB ->
+      QC' |-- QC ->
+      provable ({{P}} c {{Q}} {{QB}} {{QC}})
+  | hoare_cont : forall P,
+      provable ({{P}} CSkip {{False}} {{False}} {{P}})
+  | hoare_break : forall P,
+      provable ({{P}} CSkip {{False}} {{P}} {{False}})
 .
 
 Notation "|--  tr" := (provable tr) (at level 91, no associativity).
