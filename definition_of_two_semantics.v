@@ -1,4 +1,9 @@
 Require Import PL.definition_of_abc.
+Require Import Coq.Relations.Relation_Operators.
+Require Import Coq.Relations.Relation_Definitions.
+Arguments clos_refl_trans {A} _ _ _.
+Arguments clos_refl_trans_1n {A} _ _ _.
+Arguments clos_refl_trans_n1 {A} _ _ _.
 
 
 Definition skip_sem: state -> exit_kind -> state -> Prop :=
@@ -287,3 +292,245 @@ Inductive cstep : (com' * state) -> (com' * state) -> Prop :=
         (CNormal (cons (b, c1, c2) s) c, st)
         (CLoopCond (cons (b, c1, c2) s) b, st)
 .
+
+
+Definition id {A: Type}: A -> A -> Prop := fun a b => a = b.
+
+Definition empty {A B: Type}: A -> B -> Prop := fun a b => False.
+
+(* uncertain *)
+Definition concat {A B C D: Type} (r1: A -> D -> B -> Prop) (r2: B -> D -> C -> Prop): A -> D -> C -> Prop :=
+  fun a d c => exists b, r1 a d b /\ r2 b d c.
+
+Definition filter1 {A B: Type} (f: A -> Prop): A -> B -> Prop :=
+  fun a b => f a.
+
+Definition filter2 {A B: Type} (f: B -> Prop): A -> B -> Prop :=
+  fun a b => f b.
+
+Definition union {A B D: Type} (r1 r2: A -> D -> B -> Prop): A -> D -> B -> Prop :=
+  fun a d b => r1 a d b \/ r2 a d b.
+
+(* uncertain *)
+Definition intersection {A B D: Type} (r1 r2: A -> D -> B -> Prop): A -> D -> B -> Prop :=
+  fun a d b => r1 a d b /\ r2 a d b.
+
+Definition omega_union {A B D: Type} (rs: nat -> A -> D -> B -> Prop): A -> D -> B -> Prop :=
+  fun st1 ek st2 => exists n, rs n st1 ek st2.
+
+Definition Reflexive {A: Type} (R: A -> A -> Prop): Prop :=
+  forall x, R x x.
+
+Definition Transitive {A: Type} (R: A -> A -> Prop): Prop :=
+  forall x y z, R x y -> R y z -> R x z.
+
+Definition subrelation {A B: Type} (R R': A -> B -> Prop): Prop:=
+  forall (x : A) (y : B), R x y -> R' x y.
+
+Definition is_smallest_relation {A B: Type} (Pr: (A -> B -> Prop) -> Prop) (R: A -> B -> Prop) :=
+  Pr R /\ forall R', Pr R' -> subrelation R R'.
+
+Definition com_dequiv (d1 d2: state -> exit_kind -> state -> Prop): Prop :=
+  forall st1 EK st2, d1 st1 EK st2 <-> d2 st1 EK st2.
+
+Definition cequiv (c1 c2: com): Prop :=
+  com_dequiv (ceval c1) (ceval c2).
+
+(* Theorem loop_recur1: forall b loop_body,
+  com_dequiv
+    (loop_sem1 b loop_body)
+    (union
+      (intersection
+        (concat loop_body
+          (loop_sem1 b loop_body))
+        (filter1 (beval b)))
+      (intersection
+        id
+        (filter1 (beval (BNot b))))).
+Proof.
+  intros.
+  unfold com_dequiv.
+  intros.
+  split.
+  + intros.
+    unfold loop_sem, omega_union in H.
+    unfold union.
+    destruct H as [n H].
+    destruct n as [| n'].
+    - right.
+      simpl in H.
+      exact H.
+    - left.
+      simpl in H.
+      unfold concat, intersection in H.
+      unfold concat, intersection.
+      destruct H as [[st' [? ?]] ?].
+      split.
+      * exists st'.
+        split.
+        { exact H. }
+        unfold loop_sem, omega_union.
+        exists n'.
+        exact H0.
+      * exact H1.
+  + intros.
+    unfold loop_sem, omega_union.
+    unfold union in H.
+    destruct H.
+    - unfold intersection, concat in H.
+      destruct H as [[st' [? ?]] ?].
+      unfold loop_sem, omega_union in H0.
+      destruct H0 as [n ?].
+      exists (S n).
+      simpl.
+      unfold intersection, concat.
+      split.
+      * exists st'.
+        split.
+        { exact H. }
+        { exact H0. }
+      * exact H1.
+    - exists O.
+      simpl.
+      exact H.
+Qed.
+ *)
+Lemma refl_com_dequiv : forall (d : state -> exit_kind -> state -> Prop),
+  com_dequiv d d.
+Proof.
+  unfold com_dequiv.
+  intros.
+  tauto.
+Qed.
+
+Lemma refl_cequiv : forall (c : com), cequiv c c.
+Proof.
+  unfold cequiv.
+  intros.
+  apply refl_com_dequiv.
+Qed.
+
+Lemma sym_com_dequiv : forall (d1 d2: state -> exit_kind -> state -> Prop),
+  com_dequiv d1 d2 -> com_dequiv d2 d1.
+Proof.
+Admitted.
+(*   unfold com_dequiv.
+  intros.
+  specialize (H st1 st2).
+  tauto.
+Qed. *)
+
+Lemma sym_cequiv : forall (c1 c2 : com),
+  cequiv c1 c2 -> cequiv c2 c1.
+Proof.
+  unfold cequiv.
+  intros.
+  apply sym_com_dequiv.
+  exact H.
+Qed.
+
+Lemma trans_com_dequiv : forall (d1 d2 d3 : state -> exit_kind -> state -> Prop),
+  com_dequiv d1 d2 -> com_dequiv d2 d3 -> com_dequiv d1 d3.
+Proof.
+Admitted.
+(*   unfold com_dequiv.
+  intros.
+  specialize (H st1 st2).
+  specialize (H0 st1 st2).
+  tauto.
+Qed. *)
+
+Lemma trans_cequiv : forall (c1 c2 c3 : com),
+  cequiv c1 c2 -> cequiv c2 c3 -> cequiv c1 c3.
+Proof.
+  unfold cequiv.
+  intros.
+  pose proof trans_com_dequiv _ _ _ H H0.
+  exact H1.
+Qed.
+
+Lemma concat_congruence: forall (d1 d2 d1' d2': state -> exit_kind -> state -> Prop),
+  com_dequiv d1 d1' ->
+  com_dequiv d2 d2' ->
+  com_dequiv (concat d1 d2) (concat d1' d2').
+Proof.
+Admitted.
+(*   unfold com_dequiv.
+  intros.
+  unfold concat.
+  split; intros H1; destruct H1 as [st [? ?]].
+  + exists st.
+    split.
+    - specialize (H st1 st).
+      tauto.
+    - specialize (H0 st st2).
+      tauto.
+  + exists st.
+    split.
+    - specialize (H st1 st).
+      tauto.
+    - specialize (H0 st st2).
+      tauto.
+Qed. *)
+
+Lemma intersection_congruence: forall (d1 d2 d1' d2': state -> exit_kind -> state -> Prop),
+  com_dequiv d1 d1' ->
+  com_dequiv d2 d2' ->
+  com_dequiv (intersection d1 d2) (intersection d1' d2').
+Proof.
+Admitted.
+(*   unfold com_dequiv.
+  intros.
+  unfold intersection.
+  specialize (H st1 st2).
+  specialize (H0 st1 st2).
+  tauto.
+Qed. *)
+
+Lemma union_congruence: forall (d1 d2 d1' d2': state -> exit_kind -> state -> Prop),
+  com_dequiv d1 d1' ->
+  com_dequiv d2 d2' ->
+  com_dequiv (union d1 d2) (union d1' d2').
+Proof.
+Admitted.
+(*   unfold com_dequiv.
+  intros.
+  unfold union.
+  specialize (H st1 st2).
+  specialize (H0 st1 st2).
+  tauto.
+Qed. *)
+
+Lemma omega_union_congruence: forall (ds1 ds2: nat -> state -> exit_kind -> state -> Prop),
+  (forall n, com_dequiv (ds1 n) (ds2 n)) ->
+  com_dequiv (omega_union ds1) (omega_union ds2).
+Proof.
+Admitted.
+(*   unfold com_dequiv.
+  intros.
+  unfold omega_union.
+  split; intros H0; destruct H0 as [n ?]; exists n.
+  + specialize (H n st1 st2).
+    tauto.
+  + specialize (H n st1 st2).
+    tauto.
+Qed. *)
+
+
+Definition is_clos_refl_trans {A: Type} (R Rc: A -> A -> Prop): Prop :=
+  is_smallest_relation
+    (fun Rc' => subrelation R Rc' /\
+                Reflexive Rc' /\
+                Transitive Rc')
+    Rc.
+
+
+
+Definition multi_astep (st: state): aexp -> aexp -> Prop := clos_refl_trans (astep st).
+
+Definition multi_bstep (st: state): bexp -> bexp -> Prop := clos_refl_trans (bstep st).
+
+Print cstep.
+Definition multi_cstep: com' * state -> com' * state -> Prop := clos_refl_trans cstep.
+
+

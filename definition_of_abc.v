@@ -1,15 +1,15 @@
 Require Import Coq.Relations.Relation_Operators.
 Require Import Coq.Relations.Relation_Definitions.
-Require Import Coq.Relations.Relation_Operators.
-Require Import Coq.Relations.Relation_Definitions.
 Require Export Coq.ZArith.ZArith.
 Require Export Coq.Strings.String.
 Require Export Coq.Logic.Classical.
 
+Arguments clos_refl_trans {A} _ _ _.
+Arguments clos_refl_trans_1n {A} _ _ _.
+Arguments clos_refl_trans_n1 {A} _ _ _.
 
 Definition var: Type := nat.
 Definition state: Type := nat -> Z.
-
 
 Open Scope Z.
 
@@ -196,6 +196,11 @@ Inductive bstep : state -> bexp -> bexp -> Prop :=
       bstep st
        (BAnd BFalse b) BFalse.
 
+Definition multi_astep (st: state): aexp -> aexp -> Prop := clos_refl_trans (astep st).
+
+Definition multi_bstep (st: state): bexp -> bexp -> Prop := clos_refl_trans (bstep st).
+
+
 Inductive exit_kind: Type :=
   | EK_Normal
   | EK_Break
@@ -230,3 +235,4 @@ Notation "'Continue'":=
   (CCont)(at level 80, right associativity) : imp_scope.
 Notation "'Break'":=
   (CBreak)(at level 80, right associativity) : imp_scope.
+
