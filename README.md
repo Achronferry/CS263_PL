@@ -2,13 +2,9 @@
 ## Topic: Semantic equivalence for programs with break and continue (support for, do while, while)
 > You should first define a Hoare logic, a denotational semantics and a small step semantics for a programming language with break and continue. Then you need to prove the equivalence between small step semantics and denotational semantics. Also, you should prove the soundness theorem of Hoare logic.
 
-## Some Notes
-
-We add 'for' and 'do while' in the definition of semantic equivalence but not in the definition of hoaresound for we have no idea about whether we should support 'for' and 'do while' in both of them or just in semantic equivalence. If necessary, we will add it in later work.
-
 ## Files And What We Define
 
-### Semantic Equivalence(With 'for' and 'do while')
+### Semantic Equivalence
 
 * definition_of_abc.v
 
@@ -25,22 +21,24 @@ We add 'for' and 'do while' in the definition of semantic equivalence but not in
 
 
 
-### Hoare Sound(Without 'for' and 'do while')
+### Hoare Sound
 
 * Imp8.v
 
-  > Most of it is the same with the Imp8.v that we download from [Programming Languages](http://jhc.sjtu.edu.cn/public/courses/CS263/) web. We change something to add break and continue:
+  > Most of it is the same with the Imp8.v that we download from [Programming Languages](http://jhc.sjtu.edu.cn/public/courses/CS263/) web. But there are still something di:
   >
-  > - Definition of com: from line 54 to line 61.
-  > - Notation of com: from line 64 to line 75.
-  > - Definition of ceval: from line 214 to line 223.
-  > - Definition of cstep: from line 529 to line 639.
-  > - Defintion of hoare prove rules: from line 1235 to line 1277.
-  > - Defintion of provable: from line 1850 to line 1877
+  > - Definition of com: from line 54 to line 63.
+  > - Notation of com: from line 66 to line 81.
+  > - Definition of ceval: from line 145 to line 284.
+  > - Definition of cstep: from line 590 to line 743.
+  > - Defintion of hoare prove rules: from line 1347 to line 1287.
+  > - Defintion of provable: from line 1962 to line 1995
 
 * hoare_sound.v
 
-  > Definition of hoaresound, some useful lemma and Hoare_logic_soundness, which is exact what we need to prove.
+  > - Definition of hoaresound: from line 11 to 14
+  > - Some useful lemma: from line 16 to line 181
+  > - Hoare_logic_soundness: from line 211.
 
 ### Contributer
 
