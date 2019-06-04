@@ -8,6 +8,11 @@ Import Abstract_Pretty_Printing.
 (** We will prove Hoare logic's soundness today. Recall that a Hoare logic is
 sound when all provable Hoare triples are valid. *)
 
+Definition hoare_sound (T: FirstOrderLogic): Prop :=
+  forall P c Q QB QC,
+    |-- {{ P }} c {{ Q }} {{ QB }} {{ QC }}->
+    |== {{ P }} c {{ Q }} {{ QB }} {{ QC }}.
+
 Lemma aeval_aexp'_denote: forall st La a,
   aeval a st = aexp'_denote (st, La) (ainj a).
 Proof.
@@ -42,12 +47,6 @@ Admitted.
   + tauto.
 Qed. *)
 
-
-
-Definition hoare_sound (T: FirstOrderLogic): Prop :=
-  forall P c Q QB QC,
-    |-- {{ P }} c {{ Q }} {{ QB }} {{ QC }}->
-    |== {{ P }} c {{ Q }} {{ QB }} {{ QC }}.
 
 (** We will prove that if the logic for assertion derivation is sound, then the
 corresponding Hoare logic is also sound. Similarly, an assertion is called

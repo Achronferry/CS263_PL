@@ -58,7 +58,9 @@ Inductive com : Type :=
   | CIf (b : bexp) (c1 c2 : com)
   | CWhile (b : bexp) (c : com)
   | CBreak                       (* <--- new *)
-  | CCont                        (* <--- new *).
+  | CCont                        (* <--- new *)
+  | CFor  (c1 : com)(b : bexp) (c2 : com) (c3: com)
+  | CDoWhile   (c : com) (b : bexp).
 
 Bind Scope imp_scope with com.
 Notation "'Skip'" :=
@@ -69,10 +71,15 @@ Notation "'While' b 'Do' c 'EndWhile'" :=
   (CWhile b c) (at level 80, right associativity) : imp_scope.
 Notation "'If' c1 'Then' c2 'Else' c3 'EndIf'" :=
   (CIf c1 c2 c3) (at level 10, right associativity) : imp_scope.
+Notation "'Do' c 'While' b 'EndWhile'" :=
+  (CDoWhile c b) (at level 80, right associativity) : imp_scope.
+Notation "'For(' c1 ';' b ';' c2 ')' c3 'EndFor'" :=
+  (CFor c1 b c2 c3 )(at level 80, right associativity) : imp_scope.
 Notation "'Continue'":=
   (CCont)(at level 80, right associativity) : imp_scope.
 Notation "'Break'":=
   (CBreak)(at level 80, right associativity) : imp_scope.
+
 
 Module Abstract_Pretty_Printing.
 Coercion AId: var >-> aexp.
@@ -150,8 +157,6 @@ Definition asgn_sem (X: var) (E: aexp): state -> exit_kind -> state -> Prop :=
     forall Y, X <> Y -> st1 Y = st2 Y /\
     ek = EK_Normal.
 
-(** Obviously, skip commands and assignment commands can only terminate normally. *)
-
 Definition break_sem: state -> exit_kind -> state -> Prop :=
   fun st1 ek st2 =>
     st1 = st2 /\ ek = EK_Break.
@@ -160,17 +165,12 @@ Definition cont_sem: state -> exit_kind -> state -> Prop :=
   fun st1 ek st2 =>
     st1 = st2 /\ ek = EK_Cont.
 
-(** In contrast, [CBreak] and [CCont] will never terminate with normal exit. *)
-
 Definition seq_sem (d1 d2: state -> exit_kind -> state -> Prop)
   : state -> exit_kind -> state -> Prop
 :=
   fun st1 ek st3 =>
     (exists st2, d1 st1 EK_Normal st2 /\ d2 st2 ek st3) \/
     (d1 st1 ek st3 /\ ek <> EK_Normal).
-
-(** For sequential composition, the second command will be executed if and only
-if the first one terminates normally. *)
 
 Definition if_sem (b: bexp) (d1 d2: state -> exit_kind -> state -> Prop)
   : state -> exit_kind -> state -> Prop
@@ -179,11 +179,7 @@ Definition if_sem (b: bexp) (d1 d2: state -> exit_kind -> state -> Prop)
     (d1 st1 ek st2 /\ beval b st1) \/
     (d2 st1 ek st2 /\ ~beval b st1).
 
-(** The semantics of [if] commands is trivial. Next, we define the semantics of
-loops. Remember, a loop itself will never terminate by [break] or [continue]
-although a loop body may break and terminates whole loop's execution. *)
-
-Fixpoint iter_loop_body
+Fixpoint iter_loop_body1
   (b: bexp)
   (loop_body: state -> exit_kind -> state -> Prop)
   (n: nat)
@@ -197,19 +193,82 @@ Fixpoint iter_loop_body
      fun st1 st3 =>
       ((exists st2,
          (loop_body) st1 EK_Normal st2 /\
-         (iter_loop_body b loop_body n') st2 st3) \/
+         (iter_loop_body1 b loop_body n') st2 st3) \/
        (loop_body) st1 EK_Break st3 \/
        (exists st2,
          (loop_body) st1 EK_Cont st2 /\
-         (iter_loop_body b loop_body n') st2 st3)) /\
+         (iter_loop_body1 b loop_body n') st2 st3)) /\
        beval b st1
   end.
 
-Definition loop_sem (b: bexp) (loop_body: state -> exit_kind -> state -> Prop)
+Definition loop_sem1 (b: bexp) (loop_body: state -> exit_kind -> state -> Prop)
   : state -> exit_kind -> state -> Prop
 :=
   fun st1 ek st2 =>
-    exists n, (iter_loop_body b loop_body n) st1 st2 /\ ek = EK_Normal.
+    exists n, (iter_loop_body1 b loop_body n) st1 st2 /\ ek = EK_Normal.
+
+Fixpoint iter_loop_body2
+  (b: bexp)
+  (loop_body: state -> exit_kind -> state -> Prop)
+  (n: nat)
+  : state -> state -> Prop
+:=
+  match n with
+  | O =>
+     fun st1 st2 =>
+       ((loop_body) st1 EK_Normal st2 /\ ~beval b st2)\/
+       (loop_body) st1 EK_Break st2 \/
+       ((loop_body) st1 EK_Cont st2 /\ ~beval b st2)
+  | S n' =>
+     fun st1 st3 =>
+      ((exists st2,
+         (loop_body) st1 EK_Normal st2 /\
+         (iter_loop_body2 b loop_body n') st2 st3) \/
+       (loop_body) st1 EK_Break st3 \/
+       (exists st2,
+         (loop_body) st1 EK_Cont st2 /\
+         (iter_loop_body2 b loop_body n') st2 st3)) /\
+       beval b st3
+  end.
+
+Definition loop_sem2 (b: bexp) (loop_body: state -> exit_kind -> state -> Prop)
+  : state -> exit_kind -> state -> Prop
+:=
+  fun st1 ek st2 =>
+    exists n, (iter_loop_body2 b loop_body n) st1 st2 /\ ek = EK_Normal.
+
+Fixpoint iter_loop_body3
+  (b: bexp)
+  (loop_body: state -> exit_kind -> state -> Prop)
+  (variant: state -> exit_kind -> state -> Prop)
+  (n: nat)
+  : state -> state -> Prop
+:=
+  match n with
+  | O =>
+     fun st1 st2 =>
+       st1 = st2 /\ ~beval b st1
+  | S n' =>
+     fun st1 st4 =>
+      ((exists st2 st3,
+         (loop_body) st1 EK_Normal st2 /\
+         (variant) st2 EK_Normal st3 /\
+         (iter_loop_body3 b loop_body variant n') st3 st4) \/
+       (loop_body) st1 EK_Break st4 \/
+       (exists st2 st3,
+         (loop_body) st1 EK_Cont st2 /\
+         (variant) st2 EK_Normal st3 /\
+         (iter_loop_body3 b loop_body variant n') st3 st4)) /\
+       beval b st1
+  end.
+
+Definition loop_sem3 (b: bexp) (loop_body: state -> exit_kind -> state -> Prop) (variant: state -> exit_kind -> state -> Prop)
+  : state -> exit_kind -> state -> Prop
+:=
+  fun st1 ek st2 =>
+    exists n, (iter_loop_body3 b loop_body (variant: state -> exit_kind -> state -> Prop) n) st1 st2 /\ ek = EK_Normal.
+
+
 
 Fixpoint ceval (c: com): state -> exit_kind -> state -> Prop :=
   match c with
@@ -217,7 +276,9 @@ Fixpoint ceval (c: com): state -> exit_kind -> state -> Prop :=
   | CAss X E => asgn_sem X E
   | CSeq c1 c2 => seq_sem (ceval c1) (ceval c2)
   | CIf b c1 c2 => if_sem b (ceval c1) (ceval c2)
-  | CWhile b c => loop_sem b (ceval c)
+  | CWhile b c => loop_sem1 b (ceval c)
+  | CDoWhile c b => seq_sem (ceval c) (loop_sem2 b (ceval c))
+  | CFor c1 b c2 c3 => seq_sem (ceval c1) (loop_sem3 b (ceval c3) (ceval c2))
   | CBreak => break_sem
   | CCont => cont_sem
   end.
@@ -532,17 +593,6 @@ Local Open Scope imp.
 
 Definition cstack: Type := list (bexp * com * com).
 
-(** In order to define a small step for control flow, it is useful to define
-the following properties:
-
-    - a command [c] starts with [break]: [start_with_break c];
-
-    - a command [c] starts with [continue]: [start_with_cont c];
-
-    - a command [c] is equivalent with a sequential composition of loop
-      [CWhile b c1] and another command [c2]: [start_with_loop c b c1 c2].
-*)
-
 Inductive start_with_break: com -> Prop :=
 | SWB_Break: start_with_break CBreak
 | SWB_Seq: forall c1 c2,
@@ -557,11 +607,11 @@ Inductive start_with_cont: com -> Prop :=
 
 Inductive start_with_loop: com -> bexp -> com -> com -> Prop :=
 | SWL_While: forall b c, start_with_loop (CWhile b c) b c CSkip
+| SWL_DoWhile :forall b c, start_with_loop (CDoWhile c b) b c c
+| SWL_For : forall b c1 c2 c3, start_with_loop (CFor c1 b c2 c3) BTrue c1 (CWhile b (CSeq c2 c3))
 | SWL_Seq: forall c1 b c11 c12 c2,
              start_with_loop c1 b c11 c12 ->
              start_with_loop (CSeq c1 c2) b c11 (CSeq c12 c2).
-
-(** Now, we are ready to define a small step semantics with control stack. *)
 
 Inductive com': Type :=
 | CNormal (s: cstack) (c: com): com'
@@ -579,6 +629,8 @@ Inductive cstep : (com' * state) -> (com' * state) -> Prop :=
       cstep
         (CNormal s (CAss X (ANum n)), st1)
         (CNormal s CSkip, st2)
+
+
   | CS_SeqStep : forall st s c1 c1' st' c2,
       cstep
         (CNormal s c1, st)
@@ -590,6 +642,8 @@ Inductive cstep : (com' * state) -> (com' * state) -> Prop :=
       cstep
         (CNormal s (CSeq CSkip c2), st)
         (CNormal s c2, st)
+
+
   | CS_IfStep : forall st s b b' c1 c2,
       bstep st b b' ->
       cstep
@@ -603,34 +657,84 @@ Inductive cstep : (com' * state) -> (com' * state) -> Prop :=
       cstep
         (CNormal s (CIf BFalse c1 c2), st)
         (CNormal s c2, st)
-  | CS_While : forall st s c b c1 c2,                 (* <-- new *)
+
+
+  | CS_While : forall st s c b c1 c2,
       start_with_loop c b c1 c2 ->
       cstep
         (CNormal s c, st)
         (CLoopCond (cons (b, c1, c2) s) b, st)
-  | CS_WhileStep : forall st s b b' b'' c1 c2,        (* <-- new *)
+  | CS_WhileStep : forall st s b b' b'' c1 c2,
       bstep st b' b'' ->
       cstep
         (CLoopCond (cons (b, c1, c2) s) b', st)
         (CLoopCond (cons (b, c1, c2) s) b'', st)
-  | CS_WhileTrue : forall st s b c1 c2,               (* <-- new *)
+  | CS_WhileTrue : forall st s b c1 c2,
       cstep
         (CLoopCond (cons (b, c1, c2) s) BTrue, st)
         (CNormal (cons (b, c1, c2) s) c1, st)
-  | CS_WhileFalse : forall st s b c1 c2,              (* <-- new *)
+  | CS_WhileFalse : forall st s b c1 c2,
       cstep
         (CLoopCond (cons (b, c1, c2) s) BFalse, st)
         (CNormal s c2, st)
-  | CS_Skip : forall st s b c1 c2,                    (* <-- new *)
+
+
+(* Because the definition of SWL_DoWhile,this part is the same with CS_while. *)
+  | CS_DoWhile : forall st s c b c1 c2,
+      start_with_loop c b c1 c2 ->
+      cstep
+        (CNormal s c, st)
+        (CLoopCond (cons (b, c1, c2) s) b, st)
+  | CS_DoWhileStep : forall st s b b' b'' c1 c2,
+      bstep st b' b'' ->
+      cstep
+        (CLoopCond (cons (b, c1, c2) s) b', st)
+        (CLoopCond (cons (b, c1, c2) s) b'', st)
+  | CS_DoWhileTrue : forall st s b c1 c2,
+      cstep
+        (CLoopCond (cons (b, c1, c2) s) BTrue, st)
+        (CNormal (cons (b, c1, c2) s) c1, st)
+  | CS_DoWhileFalse : forall st s b c1 c2,
+      cstep
+        (CLoopCond (cons (b, c1, c2) s) BFalse, st)
+        (CNormal s c2, st)
+
+
+(* Because the definition of SWL_For,this part is the same with CS_while. *)
+  | CS_For : forall st s c b c1 c2,
+      start_with_loop c b c1 c2 ->
+      cstep
+        (CNormal s c, st)
+        (CLoopCond (cons (b, c1, c2) s) b, st)
+  | CS_ForStep : forall st s b b' b'' c1 c2,
+      bstep st b' b'' ->
+      cstep
+        (CLoopCond (cons (b, c1, c2) s) b', st)
+        (CLoopCond (cons (b, c1, c2) s) b'', st)
+  | CS_ForTrue : forall st s b c1 c2,
+      cstep
+        (CLoopCond (cons (b, c1, c2) s) BTrue, st)
+        (CNormal (cons (b, c1, c2) s) c1, st)
+  | CS_ForFalse : forall st s b c1 c2,
+      cstep
+        (CLoopCond (cons (b, c1, c2) s) BFalse, st)
+        (CNormal s c2, st)
+
+
+  | CS_Skip : forall st s b c1 c2,
       cstep
         (CNormal (cons (b, c1, c2) s) CSkip, st)
         (CLoopCond (cons (b, c1, c2) s) b, st)
-  | CS_Break : forall st s b c1 c2 c,                 (* <-- new *)
+
+
+  | CS_Break : forall st s b c1 c2 c,
       start_with_break c ->
       cstep
         (CNormal (cons (b, c1, c2) s) c, st)
         (CNormal s c2, st)
-  | CS_Cont : forall st s b c1 c2 c,                  (* <-- new *)
+
+
+  | CS_Cont : forall st s b c1 c2 c,
       start_with_cont c ->
       cstep
         (CNormal (cons (b, c1, c2) s) c, st)
@@ -1263,6 +1367,14 @@ Axiom hoare_while : forall I P b c,
   {{ I AND {[b]} }} c {{I}} {{P}} {{I}} ->
   {{ I }} CWhile b c {{ P OR (I AND NOT {[b]}) }} {{False}} {{False }}.
 
+Axiom hoare_for : forall I P c1 b c2 c3,
+  {{ I AND {[b]} }} c3;;c2 {{I}} {{P}} {{I}} ->
+  {{ I }} CFor c1 b c2 c3 {{ P OR (I AND NOT {[b]}) }} {{False}} {{False }}.
+
+Axiom hoare_dowhile : forall I P c b,
+  {{ I }} c {{I}} {{P}} {{I}} ->
+  {{ I }} CDoWhile c b {{ P OR (I AND NOT {[b]}) }} {{False}} {{False }}.
+
 Axiom hoare_asgn_bwd : forall P (X: var) E,
   {{ P [ X |-> E] }} CAss X E {{ P }} {{False}} {{False}}.
 
@@ -1845,7 +1957,7 @@ Definition derives {T: FirstOrderLogic} (P Q: Assertion): Prop :=
 
 Notation "P '|--' Q" :=
   (derives ((P)%assert) ((Q)%assert)) (at level 90, no associativity).
-  
+
 
 Inductive provable {T: FirstOrderLogic}: hoare_triple -> Prop :=
   | hoare_seq : forall (P Q R RB RC: Assertion) (c1 c2: com),
@@ -1860,6 +1972,12 @@ Inductive provable {T: FirstOrderLogic}: hoare_triple -> Prop :=
       provable ({{ P }} CIf b c1 c2 {{Q}} {{QB}} {{QC}})
   | hoare_while : forall I P (b:bexp) c,
       provable ({{ I AND {[b]} }} c {{I}} {{P}} {{I}}) ->
+      provable ({{ I }} CWhile b c {{ P OR (I AND NOT {[b]}) }} {{{[BFalse]}}} {{{[BFalse]}}})
+  | hoare_for : forall I P c1 (b:bexp) c2 c3,
+      provable ({{ I AND {[b]} }} c3;;c2 {{I}} {{P}} {{I}}) ->
+      provable ({{ I }} CFor c1 b c2 c3 {{ P OR (I AND NOT {[b]}) }} {{{[BFalse]}}} {{{[BFalse]}}})
+  | hoare_dowhile : forall I P (b:bexp) c,
+      provable ({{ I }} c {{I}} {{P}} {{I}}) ->
       provable ({{ I }} CWhile b c {{ P OR (I AND NOT {[b]}) }} {{{[BFalse]}}} {{{[BFalse]}}})
   | hoare_asgn_bwd : forall P (X: var) (E:aexp),
       provable ({{ P [ X |-> E] }} CAss X E {{ P }} {{{[BFalse]}}} {{{[BFalse]}}})
