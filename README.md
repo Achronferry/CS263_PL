@@ -31,8 +31,8 @@
   > - Notation of com: from line 66 to line 81.
   > - Definition of ceval: from line 145 to line 284.
   > - Definition of cstep: from line 590 to line 743.
-  > - Defintion of hoare prove rules: from line 1347 to line 1287.
-  > - Defintion of provable: from line 1962 to line 1995
+  > - Defintion of hoare prove rules: from line 1347 to line 1389.
+  > - Defintion of provable: from line 1964 to line 1999
 
 * hoare_sound.v
 
