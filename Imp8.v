@@ -56,7 +56,9 @@ Inductive com : Type :=
   | CAss (X: var) (a : aexp)
   | CSeq (c1 c2 : com)
   | CIf (b : bexp) (c1 c2 : com)
-  | CWhile (b : bexp) (c : com).
+  | CWhile (b : bexp) (c : com)
+  | CBreak                       (* <--- new *)
+  | CCont                        (* <--- new *).
 
 Bind Scope imp_scope with com.
 Notation "'Skip'" :=
@@ -67,6 +69,10 @@ Notation "'While' b 'Do' c 'EndWhile'" :=
   (CWhile b c) (at level 80, right associativity) : imp_scope.
 Notation "'If' c1 'Then' c2 'Else' c3 'EndIf'" :=
   (CIf c1 c2 c3) (at level 10, right associativity) : imp_scope.
+Notation "'Continue'":=
+  (CCont)(at level 80, right associativity) : imp_scope.
+Notation "'Break'":=
+  (CBreak)(at level 80, right associativity) : imp_scope.
 
 Module Abstract_Pretty_Printing.
 Coercion AId: var >-> aexp.
@@ -129,55 +135,98 @@ Fixpoint beval (b : bexp) (st : state) : Prop :=
   | BAnd b1 b2  => (beval b1 st) /\ (beval b2 st)
   end.
 
-Definition if_sem
-  (b: bexp)
-  (then_branch else_branch: state -> state -> Prop)
-  : state -> state -> Prop
+Inductive exit_kind: Type :=
+  | EK_Normal
+  | EK_Break
+  | EK_Cont.
+
+Definition skip_sem: state -> exit_kind -> state -> Prop :=
+  fun st1 ek st2 =>
+    st1 = st2 /\ ek = EK_Normal.
+
+Definition asgn_sem (X: var) (E: aexp): state -> exit_kind -> state -> Prop :=
+  fun st1 ek st2 =>
+    st2 X = aeval E st1 /\
+    forall Y, X <> Y -> st1 Y = st2 Y /\
+    ek = EK_Normal.
+
+(** Obviously, skip commands and assignment commands can only terminate normally. *)
+
+Definition break_sem: state -> exit_kind -> state -> Prop :=
+  fun st1 ek st2 =>
+    st1 = st2 /\ ek = EK_Break.
+
+Definition cont_sem: state -> exit_kind -> state -> Prop :=
+  fun st1 ek st2 =>
+    st1 = st2 /\ ek = EK_Cont.
+
+(** In contrast, [CBreak] and [CCont] will never terminate with normal exit. *)
+
+Definition seq_sem (d1 d2: state -> exit_kind -> state -> Prop)
+  : state -> exit_kind -> state -> Prop
 :=
-  union
-    (intersection then_branch (filter1 (beval b)))
-    (intersection else_branch (filter1 (beval (BNot b)))).
+  fun st1 ek st3 =>
+    (exists st2, d1 st1 EK_Normal st2 /\ d2 st2 ek st3) \/
+    (d1 st1 ek st3 /\ ek <> EK_Normal).
+
+(** For sequential composition, the second command will be executed if and only
+if the first one terminates normally. *)
+
+Definition if_sem (b: bexp) (d1 d2: state -> exit_kind -> state -> Prop)
+  : state -> exit_kind -> state -> Prop
+:=
+  fun st1 ek st2 =>
+    (d1 st1 ek st2 /\ beval b st1) \/
+    (d2 st1 ek st2 /\ ~beval b st1).
+
+(** The semantics of [if] commands is trivial. Next, we define the semantics of
+loops. Remember, a loop itself will never terminate by [break] or [continue]
+although a loop body may break and terminates whole loop's execution. *)
 
 Fixpoint iter_loop_body
   (b: bexp)
-  (loop_body: state -> state -> Prop)
+  (loop_body: state -> exit_kind -> state -> Prop)
   (n: nat)
   : state -> state -> Prop
 :=
   match n with
   | O =>
-         intersection
-           id
-           (filter1 (beval (BNot b)))
+     fun st1 st2 =>
+       st1 = st2 /\ ~beval b st1
   | S n' =>
-            intersection
-              (concat
-                loop_body
-                (iter_loop_body b loop_body n'))
-              (filter1 (beval b))
+     fun st1 st3 =>
+      ((exists st2,
+         (loop_body) st1 EK_Normal st2 /\
+         (iter_loop_body b loop_body n') st2 st3) \/
+       (loop_body) st1 EK_Break st3 \/
+       (exists st2,
+         (loop_body) st1 EK_Cont st2 /\
+         (iter_loop_body b loop_body n') st2 st3)) /\
+       beval b st1
   end.
 
-Definition loop_sem (b: bexp) (loop_body: state -> state -> Prop)
-  : state -> state -> Prop
+Definition loop_sem (b: bexp) (loop_body: state -> exit_kind -> state -> Prop)
+  : state -> exit_kind -> state -> Prop
 :=
-  omega_union (iter_loop_body b loop_body).
+  fun st1 ek st2 =>
+    exists n, (iter_loop_body b loop_body n) st1 st2 /\ ek = EK_Normal.
 
-Fixpoint ceval (c: com): state -> state -> Prop :=
+Fixpoint ceval (c: com): state -> exit_kind -> state -> Prop :=
   match c with
-  | CSkip => id
-  | CAss X E =>
-      fun st1 st2 =>
-        st2 X = aeval E st1 /\
-        forall Y, X <> Y -> st1 Y = st2 Y
-  | CSeq c1 c2 => concat (ceval c1) (ceval c2)
+  | CSkip => skip_sem
+  | CAss X E => asgn_sem X E
+  | CSeq c1 c2 => seq_sem (ceval c1) (ceval c2)
   | CIf b c1 c2 => if_sem b (ceval c1) (ceval c2)
   | CWhile b c => loop_sem b (ceval c)
+  | CBreak => break_sem
+  | CCont => cont_sem
   end.
+
 
 Definition com_dequiv (d1 d2: state -> state -> Prop): Prop :=
   forall st1 st2, d1 st1 st2 <-> d2 st1 st2.
 
-Definition cequiv (c1 c2: com): Prop :=
+(* Definition cequiv (c1 c2: com): Prop :=
   com_dequiv (ceval c1) (ceval c2).
 
 Theorem loop_recur: forall b loop_body,
@@ -237,9 +286,9 @@ Proof.
     - exists O.
       simpl.
       exact H.
-Qed.
+Qed. *)
 
-Lemma refl_com_dequiv : forall (d : state -> state -> Prop),
+(* Lemma refl_com_dequiv : forall (d : state -> state -> Prop),
   com_dequiv d d.
 Proof.
   unfold com_dequiv.
@@ -352,7 +401,7 @@ Proof.
     tauto.
   + specialize (H n st1 st2).
     tauto.
-Qed.
+Qed. *)
 
 Inductive aexp_halt: aexp -> Prop :=
   | AH_num : forall n, aexp_halt (ANum n).
@@ -481,40 +530,119 @@ Section cstep.
 
 Local Open Scope imp.
 
-Inductive cstep : (com * state) -> (com * state) -> Prop :=
-  | CS_AssStep : forall st X a a',
+Definition cstack: Type := list (bexp * com * com).
+
+(** In order to define a small step for control flow, it is useful to define
+the following properties:
+
+    - a command [c] starts with [break]: [start_with_break c];
+
+    - a command [c] starts with [continue]: [start_with_cont c];
+
+    - a command [c] is equivalent with a sequential composition of loop
+      [CWhile b c1] and another command [c2]: [start_with_loop c b c1 c2].
+*)
+
+Inductive start_with_break: com -> Prop :=
+| SWB_Break: start_with_break CBreak
+| SWB_Seq: forall c1 c2,
+             start_with_break c1 ->
+             start_with_break (CSeq c1 c2).
+
+Inductive start_with_cont: com -> Prop :=
+| SWC_Break: start_with_cont CCont
+| SWC_Seq: forall c1 c2,
+             start_with_cont c1 ->
+             start_with_cont (CSeq c1 c2).
+
+Inductive start_with_loop: com -> bexp -> com -> com -> Prop :=
+| SWL_While: forall b c, start_with_loop (CWhile b c) b c CSkip
+| SWL_Seq: forall c1 b c11 c12 c2,
+             start_with_loop c1 b c11 c12 ->
+             start_with_loop (CSeq c1 c2) b c11 (CSeq c12 c2).
+
+(** Now, we are ready to define a small step semantics with control stack. *)
+
+Inductive com': Type :=
+| CNormal (s: cstack) (c: com): com'
+| CLoopCond (s: cstack) (b: bexp): com'.
+
+Inductive cstep : (com' * state) -> (com' * state) -> Prop :=
+  | CS_AssStep : forall st s X a a',
       astep st a a' ->
-      cstep (CAss X a, st) (CAss X a', st)
-  | CS_Ass : forall st1 st2 X n,
+      cstep
+        (CNormal s (CAss X a), st)
+        (CNormal s (CAss X a'), st)
+  | CS_Ass : forall st1 st2 s X n,
       st2 X = n ->
       (forall Y, X <> Y -> st1 Y = st2 Y) ->
-      cstep (CAss X (ANum n), st1) (Skip, st2)
-  | CS_SeqStep : forall st c1 c1' st' c2,
-      cstep (c1, st) (c1', st') ->
-      cstep (c1 ;; c2 , st) (c1' ;; c2, st')
-  | CS_Seq : forall st c2,
-      cstep (Skip ;; c2, st) (c2, st)
-  | CS_IfStep : forall st b b' c1 c2,
+      cstep
+        (CNormal s (CAss X (ANum n)), st1)
+        (CNormal s CSkip, st2)
+  | CS_SeqStep : forall st s c1 c1' st' c2,
+      cstep
+        (CNormal s c1, st)
+        (CNormal s c1', st') ->
+      cstep
+        (CNormal s (CSeq c1 c2), st)
+        (CNormal s (CSeq c1' c2), st')
+  | CS_Seq : forall st s c2,
+      cstep
+        (CNormal s (CSeq CSkip c2), st)
+        (CNormal s c2, st)
+  | CS_IfStep : forall st s b b' c1 c2,
       bstep st b b' ->
       cstep
-        (If b  Then c1 Else c2 EndIf, st)
-        (If b'  Then c1 Else c2 EndIf, st)
-  | CS_IfTrue : forall st c1 c2,
-      cstep (If BTrue Then c1 Else c2 EndIf, st) (c1, st)
-  | CS_IfFalse : forall st c1 c2,
-      cstep (If BFalse Then c1 Else c2 EndIf, st) (c2, st)
-  | CS_While : forall st b c,
+        (CNormal s (CIf b c1 c2), st)
+        (CNormal s (CIf b' c1 c2), st)
+  | CS_IfTrue : forall st s c1 c2,
       cstep
-        (While b Do c EndWhile, st)
-        (If b Then (c;; While b Do c EndWhile) Else Skip EndIf, st).
-
+        (CNormal s (CIf BTrue c1 c2), st)
+        (CNormal s c1, st)
+  | CS_IfFalse : forall st s c1 c2,
+      cstep
+        (CNormal s (CIf BFalse c1 c2), st)
+        (CNormal s c2, st)
+  | CS_While : forall st s c b c1 c2,                 (* <-- new *)
+      start_with_loop c b c1 c2 ->
+      cstep
+        (CNormal s c, st)
+        (CLoopCond (cons (b, c1, c2) s) b, st)
+  | CS_WhileStep : forall st s b b' b'' c1 c2,        (* <-- new *)
+      bstep st b' b'' ->
+      cstep
+        (CLoopCond (cons (b, c1, c2) s) b', st)
+        (CLoopCond (cons (b, c1, c2) s) b'', st)
+  | CS_WhileTrue : forall st s b c1 c2,               (* <-- new *)
+      cstep
+        (CLoopCond (cons (b, c1, c2) s) BTrue, st)
+        (CNormal (cons (b, c1, c2) s) c1, st)
+  | CS_WhileFalse : forall st s b c1 c2,              (* <-- new *)
+      cstep
+        (CLoopCond (cons (b, c1, c2) s) BFalse, st)
+        (CNormal s c2, st)
+  | CS_Skip : forall st s b c1 c2,                    (* <-- new *)
+      cstep
+        (CNormal (cons (b, c1, c2) s) CSkip, st)
+        (CLoopCond (cons (b, c1, c2) s) b, st)
+  | CS_Break : forall st s b c1 c2 c,                 (* <-- new *)
+      start_with_break c ->
+      cstep
+        (CNormal (cons (b, c1, c2) s) c, st)
+        (CNormal s c2, st)
+  | CS_Cont : forall st s b c1 c2 c,                  (* <-- new *)
+      start_with_cont c ->
+      cstep
+        (CNormal (cons (b, c1, c2) s) c, st)
+        (CLoopCond (cons (b, c1, c2) s) b, st)
+.
 End cstep.
 
-Definition multi_astep (st: state): aexp -> aexp -> Prop := clos_refl_trans (astep st).
+(* Definition multi_astep (st: state): aexp -> aexp -> Prop := clos_refl_trans (astep st).
 
 Definition multi_bstep (st: state): bexp -> bexp -> Prop := clos_refl_trans (bstep st).
 
-Definition multi_cstep: com * state -> com * state -> Prop := clos_refl_trans cstep.
+Definition multi_cstep: com * state -> com * state -> Prop := clos_refl_trans cstep. *)
 
 Module Assertion_S.
 
@@ -665,16 +793,24 @@ Opaque derives.
 Definition equiv_assert (P Q: Assertion): Prop :=
   derives P Q /\ derives Q P.
 
-Parameter hoare_triple: Assertion -> com -> Assertion -> Prop.
-
+Parameter hoare_triple: Assertion ->
+                         com ->
+                         Assertion *  (* Normal Postcondition *)
+                         Assertion *  (* Break  Postcondition *)
+                         Assertion ->  (* Continue Condition *)
+                         Prop.
 Notation "P '|--' Q" :=
   (derives ((P)%assert) ((Q)%assert)) (at level 90, no associativity).
 
 Notation "P '--||--' Q" :=
   (equiv_assert P Q) (at level 90, no associativity).
 
-Notation "{{ P }}  c  {{ Q }}" :=
-  (hoare_triple P c Q) (at level 90, c at next level).
+Notation "{{ P }}  c  {{ Q }} {{ QB }} {{ QC }}" :=
+  (hoare_triple
+     P
+     c
+     (Q%assert: Assertion, QB%assert: Assertion, QC%assert: Assertion))
+  (at level 90, c at next level).
 
 Theorem FOL_complete: forall d1 d2: Assertion,
   (forall st, Assertion_denote st d1 -> Assertion_denote st d2) ->
@@ -790,14 +926,14 @@ End simpl.
 Axiom simpl_derives: forall P Q,
   P |-- Q <-> assn_simpl P |-- assn_simpl Q.
 
-Axiom simpl_triple: forall P c Q,
-  {{P}} c {{Q}} <-> {{assn_simpl P}} c {{assn_simpl Q}}.
+Axiom simpl_triple: forall P c Q QB QC,
+  {{P}} c {{Q}}{{ QB }} {{ QC }} <-> {{assn_simpl P}} c {{assn_simpl Q}}{{assn_simpl QB }} {{assn_simpl QC }}.
 
 Axiom elim_trivial_ex_derives: forall P Q P' Q',
   elim_trivial_ex P P' -> elim_trivial_ex Q  Q' -> (P |-- Q <-> P' |-- Q').
 
-Axiom elim_trivial_ex_triple: forall P c Q P' Q',
-  elim_trivial_ex P P' -> elim_trivial_ex Q  Q' -> ({{P}} c {{Q}} <-> {{P'}} c {{Q'}}).
+Axiom elim_trivial_ex_triple: forall P c Q P' Q' QB QC QB' QC',
+  elim_trivial_ex P P' -> elim_trivial_ex Q  Q' -> ({{P}} c {{Q}} {{ QB }} {{ QC }}<-> {{P'}} c {{Q'}}{{ QB' }} {{ QC' }}).
 
 End Assertion_S.
 
@@ -994,7 +1130,7 @@ Tactic Notation "assert_subst" "in" constr(H) :=
 
 Ltac assert_simpl_concl :=
   match goal with
-  | |- {{ _ }} _ {{ _ }} =>
+  | |- {{ _ }} _ {{ _ }} {{ _ }} {{ _ }}=>
       rewrite simpl_triple;
       simpl assn_simpl
   | |- _ |-- _ =>
@@ -1009,7 +1145,7 @@ Ltac assert_simpl_concl :=
 
 Ltac assert_simpl_assu H :=
   match type of H with
-  | {{ _ }} _ {{ _ }} =>
+  | {{ _ }} _ {{ _ }} {{ _ }} {{ _ }}=>
       rewrite simpl_triple in H;
       simpl assn_simpl in H
   | _ |-- _ =>
@@ -1053,7 +1189,7 @@ Ltac solve_elim_trivial_ex :=
 
 Ltac elim_trivial_ex_concl :=
   match goal with
-  | |- {{ _ }} _ {{ _ }} =>
+  | |- {{ _ }} _ {{ _ }} {{ _ }} {{ _ }}=>
       erewrite elim_trivial_ex_triple;
       [ | solve_elim_trivial_ex ..]
   | |- _ |-- _ =>
@@ -1063,7 +1199,7 @@ Ltac elim_trivial_ex_concl :=
 
 Ltac elim_trivial_ex_assu H :=
   match type of H with
-  | {{ _ }} _ {{ _ }} =>
+  | {{ _ }} _ {{ _ }} {{ _ }} {{ _ }}=>
       erewrite elim_trivial_ex_triple in H;
       [ | solve_elim_trivial_ex ..]
   | _ |-- _ =>
@@ -1097,39 +1233,46 @@ Ltac entailer :=
 End Assertion_S_Tac.
 
 Module Axiomatic_semantics.
-Import Concrete_Pretty_Printing.
+Import Assertion_S.
 
-Axiom hoare_seq : forall (P Q R: Assertion) (c1 c2: com),
-  {{P}} c1 {{Q}} ->
-  {{Q}} c2 {{R}} ->
-  {{P}} c1;;c2 {{R}}.
+Notation "d [ X |-> a ]" := (assn_sub X a ((d)%assert)) (at level 10, X at next level) : assert_scope.
+Notation "a0 [ X |-> a ]" := (aexp_sub X a ((a0)%imp)) (at level 10, X at next level) : imp_scope.
+
+
+
+Axiom hoare_seq : forall (P Q R RB RC: Assertion) (c1 c2: com),
+  {{P}} c1 {{Q}} {{RB}} {{RC}} ->
+  {{Q}} c2 {{R}} {{RB}} {{RC}} ->
+  {{P}} CSeq c1 c2 {{R}} {{RB}} {{RC}}.
 
 Axiom hoare_skip : forall P,
-  {{P}} Skip {{P}}.
+  {{P}} CSkip {{P}} {{False}} {{False}}.
 
-Axiom hoare_if : forall P Q b c1 c2,
-  {{ P AND {[b]} }} c1 {{ Q }} ->
-  {{ P AND NOT {[b]} }} c2 {{ Q }} ->
-  {{ P }} If b Then c1 Else c2 EndIf {{ Q }}.
+Axiom hoare_break : forall P,
+  {{P}} CSkip {{False}} {{P}} {{False}}.
 
-Axiom hoare_while : forall P b c,
-  {{ P AND {[b]} }} c {{P}} ->
-  {{P}} While b Do c EndWhile {{ P AND NOT {[b]} }}.
+Axiom hoare_cont : forall P,
+  {{P}} CSkip {{False}} {{False}} {{P}}.
 
-Axiom hoare_asgn_fwd : forall P `(X: var) E,
-  {{ P }}
-  X ::= E
-  {{ EXISTS x, P [X |-> x] AND
-               {[X]} == {[ E [X |-> x] ]} }}.
+Axiom hoare_if : forall P Q QB QC b c1 c2,
+  {{ P AND {[b]} }} c1 {{Q}} {{QB}} {{QC}} ->
+  {{ P AND NOT {[b]} }} c2 {{Q}} {{QB}} {{QC}} ->
+  {{ P }} CIf b c1 c2 {{Q}} {{QB}} {{QC}}.
 
-Axiom hoare_consequence : forall (P P' Q Q' : Assertion) c,
+Axiom hoare_while : forall I P b c,
+  {{ I AND {[b]} }} c {{I}} {{P}} {{I}} ->
+  {{ I }} CWhile b c {{ P OR (I AND NOT {[b]}) }} {{False}} {{False }}.
+
+Axiom hoare_asgn_bwd : forall P (X: var) E,
+  {{ P [ X |-> E] }} CAss X E {{ P }} {{False}} {{False}}.
+
+Axiom hoare_consequence : forall (P P' Q Q' QB QB' QC QC' : Assertion) c,
   P |-- P' ->
-  {{P'}} c {{Q'}} ->
+  {{P'}} c {{Q'}} {{QB'}} {{QC'}}->
   Q' |-- Q ->
-  {{P}} c {{Q}}.
-
-Axiom hoare_asgn_bwd : forall P `(X: var) E,
-  {{ P [ X |-> E] }} X ::= E {{ P }}.
+  QB' |-- QB ->
+  QC' |-- QC ->
+  {{P}} c {{Q}} {{QB}} {{QC}}.
 
 End Axiomatic_semantics.
 
@@ -1688,10 +1831,10 @@ Notation "d [ X |-> a ]" := (assn_sub X a ((d)%assert)) (at level 10, X at next 
 Notation "a0 [ X |-> a ]" := (aexp_sub X a ((a0)%vimp)) (at level 10, X at next level) : vimp_scope.
 
 Inductive hoare_triple: Type :=
-| Build_hoare_triple (P: Assertion) (c: com) (Q: Assertion).
+| Build_hoare_triple (P: Assertion) (c: com) (Q: Assertion)(QB: Assertion)(QC: Assertion).
 
-Notation "{{ P }}  c  {{ Q }}" :=
-  (Build_hoare_triple P c%imp Q) (at level 90, c at next level).
+Notation "{{ P }}  c  {{ Q }} {{ QB }} {{ QC }}" :=
+  (Build_hoare_triple P c%imp Q QB QC) (at level 90, c at next level).
 
 Class FirstOrderLogic: Type := {
   FOL_provable: Assertion -> Prop
@@ -1702,28 +1845,36 @@ Definition derives {T: FirstOrderLogic} (P Q: Assertion): Prop :=
 
 Notation "P '|--' Q" :=
   (derives ((P)%assert) ((Q)%assert)) (at level 90, no associativity).
+  
 
 Inductive provable {T: FirstOrderLogic}: hoare_triple -> Prop :=
-  | hoare_seq : forall (P Q R: Assertion) (c1 c2: com),
-      provable ({{P}} c1 {{Q}}) ->
-      provable ({{Q}} c2 {{R}}) ->
-      provable ({{P}} c1;;c2 {{R}})
+  | hoare_seq : forall (P Q R RB RC: Assertion) (c1 c2: com),
+      provable ({{P}} c1 {{Q}} {{RB}} {{RC}}) ->
+      provable ({{Q}} c2 {{R}} {{RB}} {{RC}}) ->
+      provable ({{P}} CSeq c1 c2 {{R}} {{RB}} {{RC}})
   | hoare_skip : forall P,
-      provable ({{P}} Skip {{P}})
-  | hoare_if : forall P Q (b: bexp) c1 c2,
-      provable ({{ P AND {[b]} }} c1 {{ Q }}) ->
-      provable ({{ P AND NOT {[b]} }} c2 {{ Q }}) ->
-      provable ({{ P }} If b Then c1 Else c2 EndIf {{ Q }})
-  | hoare_while : forall P (b: bexp) c,
-      provable ({{ P AND {[b]} }} c {{P}}) ->
-      provable ({{P}} While b Do c EndWhile {{ P AND NOT {[b]} }})
-  | hoare_asgn_bwd : forall P (X: var) (E: aexp),
-      provable ({{ P [ X |-> E] }} X ::= E {{ P }})
-  | hoare_consequence : forall (P P' Q Q' : Assertion) c,
+      provable ({{P}} CSkip {{P}} {{{[BFalse]}}} {{{[BFalse]}}})
+  | hoare_if : forall P Q QB QC (b:bexp) c1 c2,
+      provable ({{ P AND {[b]} }} c1 {{Q}} {{QB}} {{QC}}) ->
+      provable ({{ P AND NOT {[b]} }} c2 {{Q}} {{QB}} {{QC}}) ->
+      provable ({{ P }} CIf b c1 c2 {{Q}} {{QB}} {{QC}})
+  | hoare_while : forall I P (b:bexp) c,
+      provable ({{ I AND {[b]} }} c {{I}} {{P}} {{I}}) ->
+      provable ({{ I }} CWhile b c {{ P OR (I AND NOT {[b]}) }} {{{[BFalse]}}} {{{[BFalse]}}})
+  | hoare_asgn_bwd : forall P (X: var) (E:aexp),
+      provable ({{ P [ X |-> E] }} CAss X E {{ P }} {{{[BFalse]}}} {{{[BFalse]}}})
+  | hoare_consequence : forall (P P' Q Q' QB QB' QC QC' : Assertion) c,
       P |-- P' ->
-      provable ({{P'}} c {{Q'}}) ->
+      provable ({{P'}} c {{Q'}} {{QB'}} {{QC'}})->
       Q' |-- Q ->
-      provable ({{P}} c {{Q}}).
+      QB' |-- QB ->
+      QC' |-- QC ->
+      provable ({{P}} c {{Q}} {{QB}} {{QC}})
+  | hoare_cont : forall P,
+      provable ({{P}} CSkip {{{[BFalse]}}} {{{[BFalse]}}} {{P}})
+  | hoare_break : forall P,
+      provable ({{P}} CSkip {{{[BFalse]}}}  {{P}} {{{[BFalse]}}})
+.
 
 Notation "|--  tr" := (provable tr) (at level 91, no associativity).
 
@@ -1783,9 +1934,9 @@ Notation "J  |==  x" := (satisfies J x) (at level 90, no associativity).
 
 Definition valid (Tr: hoare_triple): Prop :=
   match Tr with
-  | Build_hoare_triple P c Q =>
-      forall La st1 st2,
-        (st1, La) |== P -> ceval c st1 st2 -> (st2, La) |== Q
+  | Build_hoare_triple P c Q QB QC =>
+      forall La st1 st2 EK,
+        (st1, La) |== P -> ceval c st1 EK st2 -> (st2, La) |== Q
   end.
 
 Notation "|==  Tr" := (valid Tr) (at level 91, no associativity).

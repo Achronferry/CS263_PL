@@ -8,10 +8,46 @@ Import Abstract_Pretty_Printing.
 (** We will prove Hoare logic's soundness today. Recall that a Hoare logic is
 sound when all provable Hoare triples are valid. *)
 
+Lemma aeval_aexp'_denote: forall st La a,
+  aeval a st = aexp'_denote (st, La) (ainj a).
+Proof.
+Admitted.
+(*   intros.
+  induction a; simpl.
+  + reflexivity.
+  + reflexivity.
+  + rewrite IHa1, IHa2.
+    reflexivity.
+  + rewrite IHa1, IHa2.
+    reflexivity.
+  + rewrite IHa1, IHa2.
+    reflexivity.
+Qed. *)
+
+Lemma beval_bexp'_denote: forall st La b,
+  beval b st <-> bexp'_denote (st, La) (binj b).
+Proof.
+Admitted.
+(*   intros.
+  induction b; simpl.
+  + tauto.
+  + tauto.
+  + rewrite <- aeval_aexp'_denote.
+    rewrite <- aeval_aexp'_denote.
+    tauto.
+  + rewrite <- aeval_aexp'_denote.
+    rewrite <- aeval_aexp'_denote.
+    tauto.
+  + tauto.
+  + tauto.
+Qed. *)
+
+
+
 Definition hoare_sound (T: FirstOrderLogic): Prop :=
-  forall P c Q,
-    |-- {{ P }} c {{ Q }} ->
-    |== {{ P }} c {{ Q }}.
+  forall P c Q QB QC,
+    |-- {{ P }} c {{ Q }} {{ QB }} {{ QC }}->
+    |== {{ P }} c {{ Q }} {{ QB }} {{ QC }}.
 
 (** We will prove that if the logic for assertion derivation is sound, then the
 corresponding Hoare logic is also sound. Similarly, an assertion is called
@@ -26,12 +62,13 @@ Definition FOL_sound (T: FirstOrderLogic): Prop :=
 
 (** Now, we will start our Hoare logic soundness proof. *)
 
-Lemma hoare_seq_sound : forall (P Q R: Assertion) (c1 c2: com),
-  |== {{P}} c1 {{Q}} ->
-  |== {{Q}} c2 {{R}} ->
-  |== {{P}} c1;;c2 {{R}}.
+Lemma hoare_seq_sound : forall (P Q R QB QC RB RC: Assertion) (c1 c2: com),
+  |== {{P}} c1 {{ Q }} {{ QB }} {{ QC }} ->
+  |== {{Q}} c2 {{R}} {{RB}} {{RC}}->
+  |== {{P}} c1;;c2 {{R}} {{RB}} {{RC}}.
 Proof.
-  unfold valid.
+Admitted.
+(*   unfold valid.
   intros.
   simpl in H2.
   unfold Relation_Operators.concat in H2.
@@ -39,24 +76,27 @@ Proof.
   specialize (H _ _ _ H1 H2).
   specialize (H0 _ _ _ H H3).
   exact H0.
-Qed.
+Qed. *)
 
 Lemma hoare_skip_sound : forall P,
-  |== {{P}} Skip {{P}}.
+  |== {{P}} Skip {{P}}{{{[BFalse]}}}{{{[BFalse]}}}.
 Proof.
-  unfold valid.
+Admitted.
+(*   unfold valid.
   intros.
   simpl in H0.
   unfold Relation_Operators.id in H0.
   rewrite <- H0.
   exact H.
-Qed.
+Qed. *)
 
-Lemma hoare_if_sound : forall P Q (b: bexp) c1 c2,
-  |== {{ P AND {[b]} }} c1 {{ Q }} ->
-  |== {{ P AND NOT {[b]} }} c2 {{ Q }} ->
-  |== {{ P }} If b Then c1 Else c2 EndIf {{ Q }}.
+Lemma hoare_if_sound : forall P Q QB QC(b: bexp) c1 c2,
+  |== {{ P AND {[b]} }} c1 {{ Q }} {{ QB }} {{ QC }} ->
+  |== {{ P AND NOT {[b]} }} c2 {{ Q }} {{ QB }} {{ QC }} ->
+  |== {{ P }} If b Then c1 Else c2 EndIf {{ Q }} {{ QB }} {{ QC }}.
 Proof.
+Admitted.
+(* 
   unfold valid.
   intros.
   simpl in H2.
@@ -76,13 +116,14 @@ Proof.
       pose proof beval_bexp'_denote st1 La b.
       tauto.
     - exact H2.
-Qed.
+Qed. *)
 
-Lemma hoare_while_sound : forall P (b: bexp) c,
-  |== {{ P AND {[b]} }} c {{P}} ->
-  |== {{P}} While b Do c EndWhile {{ P AND NOT {[b]} }}.
+Lemma hoare_while_sound : forall I P(b: bexp) c,
+  |== {{ I AND {[b]} }} c {{I}} {{P}} {{I}} ->
+  |== {{ I }} While b Do c EndWhile {{ P OR (I AND NOT {[b]}) }} {{{[BFalse]}}} {{{[BFalse]}}}.
 Proof.
-  unfold valid.
+Admitted.
+(*   unfold valid.
   intros.
   simpl in H1.
   unfold loop_sem in H1.
@@ -111,34 +152,44 @@ Proof.
       * exact H1.
     - exact H2.
 Qed.
-
-Lemma Assertion_sub_spec: forall st1 st2 La (P: Assertion) (X: var) (E: aexp'),
+ *)
+Lemma Assertion_sub_spec: forall st1 st2 La (P: Assertion) (X: var) (E: aexp),
   st2 X = aexp'_denote (st1, La) E ->
   (forall Y : var, X <> Y -> st1 Y = st2 Y) ->
   ((st1, La) |== P[ X |-> E]) <-> ((st2, La) |== P).
+Proof.
+  intros.
+  split;intros.
+  + rewrite <- aeval_aexp'_denote in H.
+    
+
 (* FILL IN HERE *) Admitted.
 
 Lemma hoare_asgn_bwd_sound : forall P (X: var) (E: aexp),
-  |== {{ P [ X |-> E] }} X ::= E {{ P }}.
+  |== {{ P [ X |-> E] }} X ::= E {{ P }}{{{[BFalse]}}}{{{[BFalse]}}}.
 Proof.
-  unfold valid.
+Admitted.
+(*   unfold valid.
   intros.
   simpl in H0.
   destruct H0.
   pose proof aeval_aexp'_denote st1 La E.
   rewrite H2 in H0.
-  pose proof Assertion_sub_spec st1 st2 _ P _ _ H0 H1.
+  pose proof Assertion_sub_spec st1 st2 La P X E H0 H1.
   tauto.
 Qed.
-
-Lemma hoare_consequence_sound : forall (T: FirstOrderLogic) (P P' Q Q' : Assertion) c,
+ *)
+Lemma hoare_consequence_sound : forall (T: FirstOrderLogic) (P P' Q Q' QB QB' QC QC': Assertion) c,
   FOL_sound T ->
   P |-- P' ->
-  |== {{P'}} c {{Q'}} ->
+  |== {{P'}} c {{Q'}} {{QB'}} {{QC'}} ->
   Q' |-- Q ->
-  |== {{P}} c {{Q}}.
+  QB' |-- QB ->
+  QC' |-- QC ->
+  |== {{P}} c {{Q}} {{QB}} {{QC}}.
 Proof.
-  intros.
+Admitted.
+(*   intros.
   unfold FOL_sound in H.
   unfold derives in H0, H2.
   apply H in H0.
@@ -156,15 +207,16 @@ Proof.
   pose proof H1 _ _ _ H5 H4.
   specialize (H2 (st2, La)).
   tauto.
-Qed.
+Qed. *)
 
 Theorem Hoare_logic_soundness: forall (T: FirstOrderLogic) (TS: FOL_sound T),
   hoare_sound T.
 Proof.
-  intros.
+Admitted.
+(*   intros.
   unfold hoare_sound.
   intros.
-  remember ({{P}} c {{Q}}) as Tr.
+  remember ({{P}} c {{Q}}{{QB}}{{QC}}) as Tr.
   clear P c Q HeqTr.
   induction H.
   + eapply hoare_seq_sound.
@@ -177,8 +229,8 @@ Proof.
   + apply hoare_while_sound.
     exact IHprovable.
   + apply hoare_asgn_bwd_sound.
-  + pose proof hoare_consequence_sound T P P' Q Q' c TS H IHprovable H1.
-    exact H2.
-Qed.
+  + pose proof hoare_consequence_sound T P P' Q Q' QB0 QB' QC0 QC' c TS H IHprovable H1 H2 H3.
+    exact H4.
+Qed. *)
 
 (* Thu Apr 25 12:10:27 UTC 2019 *)
