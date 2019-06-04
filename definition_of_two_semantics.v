@@ -530,7 +530,6 @@ Definition multi_astep (st: state): aexp -> aexp -> Prop := clos_refl_trans (ast
 
 Definition multi_bstep (st: state): bexp -> bexp -> Prop := clos_refl_trans (bstep st).
 
-Print cstep.
 Definition multi_cstep: com' * state -> com' * state -> Prop := clos_refl_trans cstep.
 
 

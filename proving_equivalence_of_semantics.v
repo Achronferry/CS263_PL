@@ -1,4 +1,4 @@
-Require Import PL.definition_of_two_semantics_v1.
+Require Import PL.definition_of_two_semantics.
 Require Import PL.definition_of_abc.
 Require Import Coq.Relations.Relation_Operators.
 Require Import Coq.Relations.Relation_Definitions.

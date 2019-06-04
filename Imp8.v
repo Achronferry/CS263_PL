@@ -1238,7 +1238,7 @@ Import Assertion_S.
 Notation "d [ X |-> a ]" := (assn_sub X a ((d)%assert)) (at level 10, X at next level) : assert_scope.
 Notation "a0 [ X |-> a ]" := (aexp_sub X a ((a0)%imp)) (at level 10, X at next level) : imp_scope.
 
-Print Assertion_S.
+
 
 Axiom hoare_seq : forall (P Q R RB RC: Assertion) (c1 c2: com),
   {{P}} c1 {{Q}} {{RB}} {{RC}} ->
