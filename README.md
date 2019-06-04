@@ -20,7 +20,8 @@ We add 'for' and 'do while' in the definition of semantic equivalence but not in
 
 * proving_equivalence_of_semantics.v
 
-  > It lists what we will prove to prove the equivalence of semantics.
+  > - Some lemmas we may use to prove the equivalence of semantics
+  > - The equivalence proof goal: from line 1851.
 
 
 
@@ -43,9 +44,9 @@ We add 'for' and 'do while' in the definition of semantic equivalence but not in
 
 ### Contributer
 
-- [Jiabing Fang](https://github.com/Bagusutar)
+- [Jiabin Fang](https://github.com/Bagusutar)
 - [Xiao Li](https://github.com/shjdlx)
 - [Chenyu Yang](https://github.com/Achronferry)
-- [Hanzi Xu](https://github.com/madcpt)
+- [Zihan Xu](https://github.com/madcpt)
 - [Yi Kuang](https://github.com/Schemeer)
 
