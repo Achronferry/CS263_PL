@@ -13,6 +13,9 @@
 * definition_of_two_semantics.v
 
   > Definition of two semantics, some lemmas that maybe useful and multi_steps. Some lemmas are proved, some are not yet. If we find it that the lemma is useful when we are proving the problem, then we will move it to the prove file and prove it. If not ,we will delete it.
+  >
+  > - denotational semantics: from line 9 to line 143.
+  > - small step semantics: from line 146 to line 300.
 
 * proving_equivalence_of_semantics.v
 

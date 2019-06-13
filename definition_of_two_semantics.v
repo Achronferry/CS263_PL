@@ -143,7 +143,7 @@ Fixpoint ceval (c: com): state -> exit_kind -> state -> Prop :=
   end.
 
 
-Definition cstack: Type := list (bexp * com * com).
+Definition cstack: Type := list (com * bexp * com * com).
 
 Inductive start_with_break: com -> Prop :=
 | SWB_Break: start_with_break CBreak
@@ -157,13 +157,13 @@ Inductive start_with_cont: com -> Prop :=
              start_with_cont c1 ->
              start_with_cont (CSeq c1 c2).
 
-Inductive start_with_loop: com -> bexp -> com -> com -> Prop :=
-| SWL_While: forall b c, start_with_loop (CWhile b c) b c CSkip
-| SWL_DoWhile :forall b c, start_with_loop (CDoWhile c b) b c c
-| SWL_For : forall b c1 c2 c3, start_with_loop (CFor c1 b c2 c3) BTrue c1 (CWhile b (CSeq c2 c3))
-| SWL_Seq: forall c1 b c11 c12 c2,
-             start_with_loop c1 b c11 c12 ->
-             start_with_loop (CSeq c1 c2) b c11 (CSeq c12 c2).
+Inductive start_with_loop: com -> com -> bexp -> com -> com -> Prop :=
+| SWL_While: forall b c, start_with_loop (CWhile b c) CSkip b c CSkip
+| SWL_DoWhile :forall b c, start_with_loop (CDoWhile c b) c b c CSkip
+| SWL_For : forall b c1 c2 c3, start_with_loop (CFor c1 b c2 c3) c1 b (CSeq c2 c3) CSkip
+| SWL_Seq: forall c1 b c10 c11 c12 c2,
+             start_with_loop c1 c10 b c11 c12 ->
+             start_with_loop (CSeq c1 c2) c10 b c11 (CSeq c12 c2).
 
 Inductive com': Type :=
 | CNormal (s: cstack) (c: com): com'
@@ -212,85 +212,91 @@ Inductive cstep : (com' * state) -> (com' * state) -> Prop :=
 
 
   | CS_While : forall st s c b c1 c2,
-      start_with_loop c b c1 c2 ->
+      start_with_loop c CSkip b c1 c2 ->
       cstep
         (CNormal s c, st)
-        (CLoopCond (cons (b, c1, c2) s) b, st)
+        (CLoopCond (cons (CSkip, b, c1, c2) s) b, st)
   | CS_WhileStep : forall st s b b' b'' c1 c2,
       bstep st b' b'' ->
       cstep
-        (CLoopCond (cons (b, c1, c2) s) b', st)
-        (CLoopCond (cons (b, c1, c2) s) b'', st)
+        (CLoopCond (cons (CSkip, b, c1, c2) s) b', st)
+        (CLoopCond (cons (CSkip, b, c1, c2) s) b'', st)
   | CS_WhileTrue : forall st s b c1 c2,
       cstep
-        (CLoopCond (cons (b, c1, c2) s) BTrue, st)
-        (CNormal (cons (b, c1, c2) s) c1, st)
+        (CLoopCond (cons (CSkip, b, c1, c2) s) BTrue, st)
+        (CNormal (cons (CSkip, b, c1, c2) s) c1, st)
   | CS_WhileFalse : forall st s b c1 c2,
       cstep
-        (CLoopCond (cons (b, c1, c2) s) BFalse, st)
+        (CLoopCond (cons (CSkip, b, c1, c2) s) BFalse, st)
         (CNormal s c2, st)
 
 
-(* Because the definition of SWL_DoWhile,this part is the same with CS_while. *)
   | CS_DoWhile : forall st s c b c1 c2,
-      start_with_loop c b c1 c2 ->
+      start_with_loop c c1 b c1 c2 ->
       cstep
         (CNormal s c, st)
-        (CLoopCond (cons (b, c1, c2) s) b, st)
-  | CS_DoWhileStep : forall st s b b' b'' c1 c2,
+        (CNormal (cons (c1, b, c1, c2) s) c1, st)
+  | CS_DoWhileStep1 : forall st1 st2 s b c1 c2 c1' c1'',
+      cstep
+        (CNormal (cons (c1, b, c1, c2) s) c1', st1)
+        (CNormal (cons (c1, b, c1, c2) s) c1'', st2)
+  | CS_DoWhileStep2 : forall st s b b' b'' c1 c2,
       bstep st b' b'' ->
       cstep
-        (CLoopCond (cons (b, c1, c2) s) b', st)
-        (CLoopCond (cons (b, c1, c2) s) b'', st)
+        (CLoopCond (cons (CSkip, b, c1, c2) s) b', st)
+        (CLoopCond (cons (CSkip, b, c1, c2) s) b'', st)
   | CS_DoWhileTrue : forall st s b c1 c2,
       cstep
-        (CLoopCond (cons (b, c1, c2) s) BTrue, st)
-        (CNormal (cons (b, c1, c2) s) c1, st)
+        (CLoopCond (cons (CSkip, b, c1, c2) s) BTrue, st)
+        (CNormal (cons (CSkip, b, c1, c2) s) c1, st)
   | CS_DoWhileFalse : forall st s b c1 c2,
       cstep
-        (CLoopCond (cons (b, c1, c2) s) BFalse, st)
+        (CLoopCond (cons (CSkip, b, c1, c2) s) BFalse, st)
         (CNormal s c2, st)
 
 
-(* Because the definition of SWL_For,this part is the same with CS_while. *)
-  | CS_For : forall st s c b c1 c2,
-      start_with_loop c b c1 c2 ->
+  | CS_For : forall st s c b c1 c2 c3,
+      start_with_loop c c1 b c2 c3 ->
       cstep
         (CNormal s c, st)
-        (CLoopCond (cons (b, c1, c2) s) b, st)
-  | CS_ForStep : forall st s b b' b'' c1 c2,
+        (CNormal (cons (c1, b, c2, c3) s) c1, st)
+  | CS_ForStep1 : forall st1 st2 s b c1 c2 c3 c1' c1'',
+      cstep
+        (CNormal (cons (c1, b, c2, c3) s) c1', st1)
+        (CNormal (cons (c1, b, c2, c3) s) c1'', st2)
+  | CS_ForStep2 : forall st s b b' b'' c1 c2,
       bstep st b' b'' ->
       cstep
-        (CLoopCond (cons (b, c1, c2) s) b', st)
-        (CLoopCond (cons (b, c1, c2) s) b'', st)
+        (CLoopCond (cons (CSkip, b, c1, c2) s) b', st)
+        (CLoopCond (cons (CSkip, b, c1, c2) s) b'', st)
   | CS_ForTrue : forall st s b c1 c2,
       cstep
-        (CLoopCond (cons (b, c1, c2) s) BTrue, st)
-        (CNormal (cons (b, c1, c2) s) c1, st)
+        (CLoopCond (cons (CSkip, b, c1, c2) s) BTrue, st)
+        (CNormal (cons (CSkip, b, c1, c2) s) c1, st)
   | CS_ForFalse : forall st s b c1 c2,
       cstep
-        (CLoopCond (cons (b, c1, c2) s) BFalse, st)
+        (CLoopCond (cons (CSkip, b, c1, c2) s) BFalse, st)
         (CNormal s c2, st)
 
 
-  | CS_Skip : forall st s b c1 c2,
+  | CS_Skip : forall st s b c0 c1 c2,
       cstep
-        (CNormal (cons (b, c1, c2) s) CSkip, st)
-        (CLoopCond (cons (b, c1, c2) s) b, st)
+        (CNormal (cons (c0, b, c1, c2) s) CSkip, st)
+        (CLoopCond (cons (c0, b, c1, c2) s) b, st)
 
 
-  | CS_Break : forall st s b c1 c2 c,
+  | CS_Break : forall st s b c0 c1 c2 c,
       start_with_break c ->
       cstep
-        (CNormal (cons (b, c1, c2) s) c, st)
+        (CNormal (cons (c0, b, c1, c2) s) c, st)
         (CNormal s c2, st)
 
 
-  | CS_Cont : forall st s b c1 c2 c,
+  | CS_Cont : forall st s b c0 c1 c2 c,
       start_with_cont c ->
       cstep
-        (CNormal (cons (b, c1, c2) s) c, st)
-        (CLoopCond (cons (b, c1, c2) s) b, st)
+        (CNormal (cons (c0, b, c1, c2) s) c, st)
+        (CLoopCond (cons (c0, b, c1, c2) s) b, st)
 .
 
 
