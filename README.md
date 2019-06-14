@@ -14,8 +14,8 @@
 
   > Definition of two semantics, some lemmas that maybe useful and multi_steps. Some lemmas are proved, some are not yet. If we find it that the lemma is useful when we are proving the problem, then we will move it to the prove file and prove it. If not ,we will delete it.
   >
-  > - denotational semantics: from line 9 to line 143.
-  > - small step semantics: from line 146 to line 300.
+  > - denotational semantics: from line 9 to line 145.
+  > - small step semantics: from line 146 to line 368.
 
 * proving_equivalence_of_semantics.v
 
@@ -34,8 +34,8 @@
   > - Notation of com: from line 66 to line 81.
   > - Definition of ceval: from line 145 to line 284.
   > - Definition of cstep: from line 590 to line 743.
-  > - Defintion of hoare prove rules: from line 1347 to line 1389.
-  > - Defintion of provable: from line 1964 to line 1999
+  > - Defintion of hoare prove rules: from line 1347 to line 1390.
+  > - Definition of provable: from line 1965 to line 2001.
 
 * hoare_sound.v
 
