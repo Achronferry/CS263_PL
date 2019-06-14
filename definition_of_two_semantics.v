@@ -142,8 +142,12 @@ Fixpoint ceval (c: com): state -> exit_kind -> state -> Prop :=
   | CCont => cont_sem
   end.
 
+Inductive stack_ele := 
+| Forloop   (c1:com)(b:bexp)(c2 c3 c4:com)
+| Whileloop (b:bexp)(c1 c2:com)
+| Dowhileloop   (c1:com)(b:bexp)(c2:com).
 
-Definition cstack: Type := list (com * bexp * com * com).
+Definition cstack: Type := list stack_ele.
 
 Inductive start_with_break: com -> Prop :=
 | SWB_Break: start_with_break CBreak
@@ -157,13 +161,20 @@ Inductive start_with_cont: com -> Prop :=
              start_with_cont c1 ->
              start_with_cont (CSeq c1 c2).
 
-Inductive start_with_loop: com -> com -> bexp -> com -> com -> Prop :=
-| SWL_While: forall b c, start_with_loop (CWhile b c) CSkip b c CSkip
-| SWL_DoWhile :forall b c, start_with_loop (CDoWhile c b) c b c CSkip
-| SWL_For : forall b c1 c2 c3, start_with_loop (CFor c1 b c2 c3) c1 b (CSeq c2 c3) CSkip
-| SWL_Seq: forall c1 b c10 c11 c12 c2,
-             start_with_loop c1 c10 b c11 c12 ->
-             start_with_loop (CSeq c1 c2) c10 b c11 (CSeq c12 c2).
+Inductive start_with_while_loop: com -> bexp -> com -> com -> Prop :=
+| SWWL_While: forall b c, start_with_while_loop (CWhile b c) b c CSkip
+| SWWL_Seq: forall c1 b c11 c12 c2,
+             start_with_while_loop c1 b c11 c12 ->
+             start_with_while_loop (CSeq c1 c2) b c11 (CSeq c12 c2).
+
+Inductive start_with_for_loop: com -> com -> bexp -> com -> com -> com -> Prop :=
+| SWFL_For: forall c1 b c2 c3, start_with_for_loop (CFor c1 b c2 c3) c1 b c3 c2 CSkip
+| SWFL_Seq: forall c1 c10 b c11 c12 c13 c2,
+             start_with_for_loop c1 c10 b c11 c12 c13 ->
+             start_with_for_loop (CSeq c1 c2) c10 b c11 c12 (CSeq c13 c2).
+
+Inductive start_with_dowhile_loop: com -> com -> bexp -> com -> Prop :=
+| SWDL_Dowhile: 
 
 Inductive com': Type :=
 | CNormal (s: cstack) (c: com): com'

@@ -1367,9 +1367,10 @@ Axiom hoare_while : forall I P b c,
   {{ I AND {[b]} }} c {{I}} {{P}} {{I}} ->
   {{ I }} CWhile b c {{ P OR (I AND NOT {[b]}) }} {{False}} {{False }}.
 
-Axiom hoare_for : forall U I IB IC P c1 b c2 c3,
-  {{ U }} c1 {{I}} {{IB}} {{IC}} ->
-  {{ I AND {[b]} }} c3;;c2 {{I}} {{P}} {{I}} ->
+Axiom hoare_for : forall U I IT P c1 b c2 c3,
+  {{ U }} c1 {{I}} {{False}} {{False}} ->
+  {{ I AND {[b]} }} c3 {{IT}} {{P}} {{IT}} ->
+  {{ IT }} c2 {{ I }} {{False}} {{False}} ->
   {{ U }} CFor c1 b c2 c3 {{ P OR (I AND NOT {[b]}) }} {{False}} {{False }}.
 
 Axiom hoare_dowhile : forall U I P0 P1 c b,
@@ -1975,9 +1976,10 @@ Inductive provable {T: FirstOrderLogic}: hoare_triple -> Prop :=
   | hoare_while : forall I P (b:bexp) c,
       provable ({{ I AND {[b]} }} c {{I}} {{P}} {{I}}) ->
       provable ({{ I }} CWhile b c {{ P OR (I AND NOT {[b]}) }} {{{[BFalse]}}} {{{[BFalse]}}})
-  | hoare_for : forall U I IB IC P c1 (b:bexp) c2 c3,
-      provable ({{ U }} c1 {{I}} {{IB}} {{IC}}) ->
-      provable ({{ I AND {[b]} }} c3;;c2 {{I}} {{P}} {{I}}) ->
+  | hoare_for : forall U I IT P c1 (b:bexp) c2 c3,
+      provable ({{ U }} c1 {{I}} {{{[BFalse]}}} {{{[BFalse]}}}) ->
+      provable ({{ I AND {[b]} }} c3 {{IT}} {{P}} {{IT}}) ->
+      provable ({{ IT }} c2 {{ I }} {{{[BFalse]}}} {{{[BFalse]}}}) ->
       provable ({{ U }} CFor c1 b c2 c3 {{ P OR (I AND NOT {[b]}) }} {{{[BFalse]}}} {{{[BFalse]}}})
   | hoare_dowhile : forall U I P0 P1 (b:bexp) c,
       provable ({{ U }} c {{I}} {{P0}} {{I}}) ->
