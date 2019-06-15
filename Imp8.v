@@ -2059,8 +2059,8 @@ Notation "J  |==  x" := (satisfies J x) (at level 90, no associativity).
 Definition valid (Tr: hoare_triple): Prop :=
   match Tr with
   | Build_hoare_triple P c Q QB QC =>
-      forall La st1 st2 EK,
-        (st1, La) |== P -> ceval c st1 EK st2 -> (st2, La) |== Q
+      forall La st1 st2,
+        (st1, La) |== P -> ceval c st1 EK_Normal st2 -> (st2, La) |== Q
   end.
 
 Notation "|==  Tr" := (valid Tr) (at level 91, no associativity).
