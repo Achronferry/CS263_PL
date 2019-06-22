@@ -911,7 +911,7 @@ Qed.
 Lemma semantic_equiv_iter_loop1: forall st1 EK st2 n b c s,
   (forall st1 st2, ceval c st1 EK st2 -> multi_cstep (CNormal s c, st1) (CNormal s CSkip, st2)) ->
   iter_loop_body1 b (ceval c) n st1 st2 ->
-  multi_cstep (CLoopCond (cons (b, c, CSkip) s) b, st1) (CNormal s CSkip, st2).
+  multi_cstep (CLoopCond (cons (Whileloop b c CSkip) s) b, st1) (CNormal s CSkip, st2).
 Proof.
 Admitted.
 (*   intros.
@@ -964,9 +964,71 @@ Admitted.
     exact H3.
 Qed.
  *)
-Theorem semantic_equiv_com1: forall st1 st2 c s EK,
-  ceval c st1 EK st2 -> multi_cstep (CNormal s c, st1) (CNormal s CSkip, st2).
+
+Theorem semantic_equiv_com1: forall st1 st2 c s,
+  (exists EK, ceval c st1 EK st2) -> multi_cstep (CNormal s c, st1) (CNormal s CSkip, st2).
 Proof.
+  intros.
+  revert st1 st2 H; induction c; intros; simpl in H.
+  + unfold skip_sem in H; destruct H as [? [? ?]].
+      rewrite H.
+      eapply rt_refl.
+  + unfold asgn_sem in H; destruct H.
+      assert (aeval a st1 = aeval a st1). {reflexivity. }
+      pose proof semantic_equiv_aexp1 _ _ _ H0.
+      pose proof (multi_congr_CAss _ s X _ _ ) H1.
+      (*pose proof CS_Ass.*)
+     (* assert ( multi_cstep  (CNormal s (CAss X (aeval a st1)), st1) (CNormal s Skip, st2)). admit.*)
+      eapply multi_cstep_trans_n1.
+      exact H2. clear H1 H2 H0.
+      pose proof CS_Ass.
+      admit.
+
+  + destruct H.
+       unfold seq_sem in H; destruct H.
+      - destruct H; destruct H.
+         admit.
+      - destruct H.
+         admit.
+
+  + unfold if_sem in H.
+      pose proof semantic_equiv_bexp1 st1 b.
+      destruct H0.
+      destruct H as [? [[? ?] | [? ?]]].
+      - specialize (H0 H2).
+         assert (exists EK : exit_kind, ceval c1 st1 EK st2). { exists x. exact H. }
+         pose proof IHc1 _ _ H3.
+         clear H H1 H2 H3 IHc1 IHc2.
+         pose proof multi_congr_CIf st1 s _ _ c1 c2 H0.
+         pose proof CS_IfTrue st1 s c1 c2.
+         pose proof multi_cstep_trans_n1 H H1.
+         pose proof multi_cstep_trans H2 H4.
+         exact H3.
+      - specialize (H1 H2).
+         assert (exists EK : exit_kind, ceval c2 st1 EK st2). { exists x. exact H. }
+         pose proof IHc2 _  _ H3.
+         clear H H0 H2 H3 IHc1 IHc2.
+         pose proof (multi_congr_CIf st1 s  _ _ c1 c2) H1.
+         pose proof CS_IfFalse st1 s c1 c2.
+         pose proof multi_cstep_trans_n1 H H0.
+         pose proof multi_cstep_trans H2 H4.
+         exact H3.
+
+  + destruct H as [? [? ?]]. 
+      pose proof semantic_equiv_iter_loop1.
+(*      specialize IHc with _ _ EK.
+      pose proof (semantic_equiv_iter_loop1 _ _ _ _ _ _ _) (IHc _ _ EK).
+      unfold Relation_Operators.omega_union in H.
+    destruct H as [n ?].
+    apply semantic_equiv_iter_loop1 with n.
+    - exact IHc.
+    - exact H.*)admit.
+
+  + destruct H. admit.
+  + destruct H. admit.
+  + (*CFor 要单独拿出来（类似于 semantic_equiv_iter_loop1 不然展不开*)
+      pose proof CS_For.
+  + 
 Admitted.
 (*   intros.
   revert st1 st2 H; induction c; intros; simpl in H.
