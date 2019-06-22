@@ -154,8 +154,8 @@ Definition skip_sem: state -> exit_kind -> state -> Prop :=
 Definition asgn_sem (X: var) (E: aexp): state -> exit_kind -> state -> Prop :=
   fun st1 ek st2 =>
     st2 X = aeval E st1 /\
-    forall Y, X <> Y -> st1 Y = st2 Y /\
-    ek = EK_Normal.
+    ek = EK_Normal /\
+    forall Y, X <> Y -> st1 Y = st2 Y.
 
 Definition break_sem: state -> exit_kind -> state -> Prop :=
   fun st1 ek st2 =>
