@@ -721,15 +721,14 @@ Theorem multi_congr_CSeq: forall st1 s c1 st1' c1' c2,
   multi_cstep (CNormal s (CSeq c1 c2), st1)
         (CNormal s (CSeq c1' c2), st1').
 Proof.
-Admitted.
-(*   intros.
+  intros.
   induction_n1 H.
   + apply multi_cstep_refl.
   + eapply multi_cstep_trans_n1.
     - exact IH.
     - apply CS_SeqStep.
       exact H0.
-Qed. *)
+Qed.
 
 Theorem multi_congr_CIf: forall st s b b' c1 c2,
   multi_bstep st b b' ->
@@ -962,8 +961,8 @@ Admitted.
     exact H3.
 Qed.
  *)
-Theorem semantic_equiv_com1: forall st1 st2 c s EK,
-  ceval c st1 EK st2 -> multi_cstep (CNormal s c, st1) (CNormal s CSkip, st2).
+Theorem semantic_equiv_com1: forall st1 st2 c s,
+  (exists EK, ceval c st1 EK st2) -> multi_cstep (CNormal s c, st1) (CNormal s CSkip, st2).
 Proof.
 Admitted.
 (*   intros.
@@ -1780,9 +1779,11 @@ Proof.
       tauto.
 Qed.
 
-Theorem semantic_equiv_com2: forall s c st1 EK st2,
-  multi_cstep (CNormal  s c, st1) (CNormal  s CSkip, st2) -> ceval c st1 EK st2.
+Theorem semantic_equiv_com2: forall s c st1 st2,
+  multi_cstep (CNormal  s c, st1) (CNormal  s CSkip, st2) -> (exists EK, ceval c st1 EK st2).
 Proof.
+  intros.
+
 Admitted.
 (*   intros.
   revert st1 st2 H; induction c; intros.
@@ -1846,8 +1847,8 @@ Qed.
 (* ################################################################# *)
 (** * Final Theorem *)
 
-Theorem semantic_equiv: forall s c st1 EK st2,
-  ceval c st1 EK st2 <-> multi_cstep (CNormal  s c, st1) (CNormal  s CSkip, st2).
+Theorem semantic_equiv: forall s c st1 st2,
+  (exists EK, ceval c st1 EK st2) <-> multi_cstep (CNormal  s c, st1) (CNormal  s CSkip, st2).
 Proof.
   intros.
   split.
