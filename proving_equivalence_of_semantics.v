@@ -1946,6 +1946,33 @@ Theorem semantic_equiv: forall s c st1 EK st2,
 Proof.
   intros.
   split.
-  + apply semantic_equiv_com1.
+  + admit. (*apply semantic_equiv_com1.*)
   + apply semantic_equiv_com2.
-Qed.
+
+Admitted.
+
+
+
+
+
+
+
+
+
+
+
+Theorem semantic_equiv_normal: forall s c st1 st2,
+  multi_cstep (CNormal  s c, st1) (CNormal  s CSkip, st2) -> ceval c st1 EK_Normal st2.
+Proof.
+Admitted.
+
+
+Theorem semantic_equiv_break: forall s c st1 st2,
+  exists c', multi_cstep (CNormal  s c, st1) (CNormal  s c', st2) /\ start_with_break c' -> ceval c st1 EK_Break st2.
+Proof.
+Admitted.
+
+Theorem semantic_equiv_cont: forall s c st1 st2,
+  exists c', multi_cstep (CNormal  s c, st1) (CNormal  s c', st2) /\ start_with_cont c'  -> ceval c st1 EK_Cont st2.
+Proof.
+Admitted.
