@@ -1367,13 +1367,16 @@ Axiom hoare_while : forall I P b c,
   {{ I AND {[b]} }} c {{I}} {{P}} {{I}} ->
   {{ I }} CWhile b c {{ P OR (I AND NOT {[b]}) }} {{False}} {{False }}.
 
-Axiom hoare_for : forall I P c1 b c2 c3,
-  {{ I AND {[b]} }} c3;;c2 {{I}} {{P}} {{I}} ->
-  {{ I }} CFor c1 b c2 c3 {{ P OR (I AND NOT {[b]}) }} {{False}} {{False }}.
+Axiom hoare_for : forall U I IT P c1 b c2 c3,
+  {{ U }} c1 {{I}} {{False}} {{False}} ->
+  {{ I AND {[b]} }} c3 {{IT}} {{P}} {{IT}} ->
+  {{ IT }} c2 {{ I }} {{False}} {{False}} ->
+  {{ U }} CFor c1 b c2 c3 {{ P OR (I AND NOT {[b]}) }} {{False}} {{False }}.
 
-Axiom hoare_dowhile : forall I P c b,
-  {{ I }} c {{I}} {{P}} {{I}} ->
-  {{ I }} CDoWhile c b {{ P OR (I AND NOT {[b]}) }} {{False}} {{False }}.
+Axiom hoare_dowhile : forall U I P0 P1 c b,
+  {{ U }} c {{I}} {{P0}} {{I}} ->
+  {{ I AND {[b]} }} c {{I}} {{P1}} {{I}} ->
+  {{ U }} CDoWhile c b {{ P0 OR P1 OR (I AND NOT {[b]}) }} {{False}} {{False }}.
 
 Axiom hoare_asgn_bwd : forall P (X: var) E,
   {{ P [ X |-> E] }} CAss X E {{ P }} {{False}} {{False}}.
@@ -1973,12 +1976,15 @@ Inductive provable {T: FirstOrderLogic}: hoare_triple -> Prop :=
   | hoare_while : forall I P (b:bexp) c,
       provable ({{ I AND {[b]} }} c {{I}} {{P}} {{I}}) ->
       provable ({{ I }} CWhile b c {{ P OR (I AND NOT {[b]}) }} {{{[BFalse]}}} {{{[BFalse]}}})
-  | hoare_for : forall I P c1 (b:bexp) c2 c3,
-      provable ({{ I AND {[b]} }} c3;;c2 {{I}} {{P}} {{I}}) ->
-      provable ({{ I }} CFor c1 b c2 c3 {{ P OR (I AND NOT {[b]}) }} {{{[BFalse]}}} {{{[BFalse]}}})
-  | hoare_dowhile : forall I P (b:bexp) c,
-      provable ({{ I }} c {{I}} {{P}} {{I}}) ->
-      provable ({{ I }} CWhile b c {{ P OR (I AND NOT {[b]}) }} {{{[BFalse]}}} {{{[BFalse]}}})
+  | hoare_for : forall U I IT P c1 (b:bexp) c2 c3,
+      provable ({{ U }} c1 {{I}} {{{[BFalse]}}} {{{[BFalse]}}}) ->
+      provable ({{ I AND {[b]} }} c3 {{IT}} {{P}} {{IT}}) ->
+      provable ({{ IT }} c2 {{ I }} {{{[BFalse]}}} {{{[BFalse]}}}) ->
+      provable ({{ U }} CFor c1 b c2 c3 {{ P OR (I AND NOT {[b]}) }} {{{[BFalse]}}} {{{[BFalse]}}})
+  | hoare_dowhile : forall U I P0 P1 (b:bexp) c,
+      provable ({{ U }} c {{I}} {{P0}} {{I}}) ->
+      provable ({{ I AND {[b]}}} c {{I}} {{P1}} {{I}}) ->
+      provable ({{ U }} CDoWhile c b {{ P0 OR P1 OR (I AND NOT {[b]}) }} {{{[BFalse]}}} {{{[BFalse]}}})
   | hoare_asgn_bwd : forall P (X: var) (E:aexp),
       provable ({{ P [ X |-> E] }} CAss X E {{ P }} {{{[BFalse]}}} {{{[BFalse]}}})
   | hoare_consequence : forall (P P' Q Q' QB QB' QC QC' : Assertion) c,
@@ -2053,8 +2059,8 @@ Notation "J  |==  x" := (satisfies J x) (at level 90, no associativity).
 Definition valid (Tr: hoare_triple): Prop :=
   match Tr with
   | Build_hoare_triple P c Q QB QC =>
-      forall La st1 st2 EK,
-        (st1, La) |== P -> ceval c st1 EK st2 -> (st2, La) |== Q
+      forall La st1 st2,
+        (st1, La) |== P -> ceval c st1 EK_Normal st2 -> (st2, La) |== Q
   end.
 
 Notation "|==  Tr" := (valid Tr) (at level 91, no associativity).
