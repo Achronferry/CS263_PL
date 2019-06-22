@@ -13,8 +13,8 @@ Definition skip_sem: state -> exit_kind -> state -> Prop :=
 Definition asgn_sem (X: var) (E: aexp): state -> exit_kind -> state -> Prop :=
   fun st1 ek st2 =>
     st2 X = aeval E st1 /\
-    forall Y, X <> Y -> st1 Y = st2 Y /\
-    ek = EK_Normal.
+    ek = EK_Normal /\
+    forall Y, X <> Y -> st1 Y = st2 Y.
 
 Definition break_sem: state -> exit_kind -> state -> Prop :=
   fun st1 ek st2 =>
@@ -180,10 +180,10 @@ Inductive start_with_dowhile_loop: com -> com -> bexp -> com -> Prop :=
              start_with_dowhile_loop (CSeq c1 c2) c11 b (CSeq c12 c2).
 
 Inductive com': Type :=
-| CNormal (s: cstack) (c: com): com'
-| CLoopCond (s: cstack) (b: bexp): com'
-| CInit (s: cstack) (c: com): com'
-| CIncrement (s: cstack) (c: com): com'.
+| CNormal (s: cstack) (c: com):com'
+| CLoopCond (s: cstack) (b: bexp):com'
+| CInit (s: cstack) (c: com):com'
+| CIncrement (s: cstack) (c: com):com'.
 
 Inductive cstep : (com' * state) -> (com' * state) -> Prop :=
   | CS_AssStep : forall st s X a a',

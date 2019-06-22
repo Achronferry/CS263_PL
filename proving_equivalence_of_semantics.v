@@ -722,8 +722,7 @@ Theorem multi_congr_CSeq: forall st1 s c1 st1' c1' c2,
         (CNormal s (CSeq c1' c2), st1').
 Proof.
 Admitted.
-(* 
-  intros.
+(*   intros.
   induction_n1 H.
   + apply multi_cstep_refl.
   + eapply multi_cstep_trans_n1.
@@ -836,7 +835,6 @@ Proof.
     pose proof AH_num (aeval a1 st).
     pose proof multi_congr_BEq2 _ _ _ _ H1 H0 as IH2.
     clear H H0 H1.
-    
     split; intros.
     - pose proof BS_Eq_True st _ _ H.
       pose proof multi_bstep_trans IH1 IH2.
@@ -911,7 +909,7 @@ Qed.
 Lemma semantic_equiv_iter_loop1: forall st1 EK st2 n b c s,
   (forall st1 st2, ceval c st1 EK st2 -> multi_cstep (CNormal s c, st1) (CNormal s CSkip, st2)) ->
   iter_loop_body1 b (ceval c) n st1 st2 ->
-  multi_cstep (CLoopCond (cons (b, c, CSkip) s) b, st1) (CNormal s CSkip, st2).
+  multi_cstep (CLoopCond (cons (Whileloop b c CSkip) s) b, st1) (CNormal s CSkip, st2).
 Proof.
 Admitted.
 (*   intros.
