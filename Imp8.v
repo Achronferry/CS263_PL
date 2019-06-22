@@ -154,8 +154,8 @@ Definition skip_sem: state -> exit_kind -> state -> Prop :=
 Definition asgn_sem (X: var) (E: aexp): state -> exit_kind -> state -> Prop :=
   fun st1 ek st2 =>
     st2 X = aeval E st1 /\
-    forall Y, X <> Y -> st1 Y = st2 Y /\
-    ek = EK_Normal.
+    ek = EK_Normal /\
+    forall Y, X <> Y -> st1 Y = st2 Y.
 
 Definition break_sem: state -> exit_kind -> state -> Prop :=
   fun st1 ek st2 =>
@@ -1353,10 +1353,10 @@ Axiom hoare_skip : forall P,
   {{P}} CSkip {{P}} {{False}} {{False}}.
 
 Axiom hoare_break : forall P,
-  {{P}} CSkip {{False}} {{P}} {{False}}.
+  {{P}} CBreak {{False}} {{P}} {{False}}.
 
 Axiom hoare_cont : forall P,
-  {{P}} CSkip {{False}} {{False}} {{P}}.
+  {{P}} CCont {{False}} {{False}} {{P}}.
 
 Axiom hoare_if : forall P Q QB QC b c1 c2,
   {{ P AND {[b]} }} c1 {{Q}} {{QB}} {{QC}} ->
@@ -1995,9 +1995,9 @@ Inductive provable {T: FirstOrderLogic}: hoare_triple -> Prop :=
       QC' |-- QC ->
       provable ({{P}} c {{Q}} {{QB}} {{QC}})
   | hoare_cont : forall P,
-      provable ({{P}} CSkip {{{[BFalse]}}} {{{[BFalse]}}} {{P}})
+      provable ({{P}} CCont {{{[BFalse]}}} {{{[BFalse]}}} {{P}})
   | hoare_break : forall P,
-      provable ({{P}} CSkip {{{[BFalse]}}}  {{P}} {{{[BFalse]}}})
+      provable ({{P}} CBreak {{{[BFalse]}}}  {{P}} {{{[BFalse]}}})
 .
 
 Notation "|--  tr" := (provable tr) (at level 91, no associativity).
@@ -2060,7 +2060,9 @@ Definition valid (Tr: hoare_triple): Prop :=
   match Tr with
   | Build_hoare_triple P c Q QB QC =>
       forall La st1 st2,
-        (st1, La) |== P -> ceval c st1 EK_Normal st2 -> (st2, La) |== Q
+        (st1, La) |== P -> (ceval c st1 EK_Normal st2 -> (st2, La) |== Q)/\
+                           (ceval c st1 EK_Break st2 -> (st2, La) |== QB)/\
+                           (ceval c st1 EK_Cont st2 -> (st2, La) |== QC)
   end.
 
 Notation "|==  Tr" := (valid Tr) (at level 91, no associativity).
