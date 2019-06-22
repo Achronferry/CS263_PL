@@ -973,79 +973,62 @@ Admitted.
 
 (* *)
 
-Theorem semantic_equiv_com1: forall st1 st2 c s,
-  (exists EK, ceval c st1 EK st2) -> multi_cstep (CNormal s c, st1) (CNormal s CSkip, st2).
+Theorem semantic_equiv_com1_Normal: forall st1 st2 c s,
+ceval c st1 EK_Normal st2 ->  multi_cstep (CNormal s c, st1) (CNormal s CSkip, st2).
 Proof.
   intros.
   revert st1 st2 H; induction c; intros; simpl in H.
-  + unfold skip_sem in H; destruct H as [? [? ?]].
+  + unfold skip_sem in H; destruct H.
       rewrite H.
       eapply rt_refl.
   + unfold asgn_sem in H; destruct H.
       assert (aeval a st1 = aeval a st1). {reflexivity. }
-      pose proof semantic_equiv_aexp1 _ _ _ H0.
-      pose proof (multi_congr_CAss _ s X _ _ ) H1.
+      pose proof semantic_equiv_aexp1 _ _ _ H1.
+      pose proof (multi_congr_CAss _ s X _ _ ) H2.
       eapply multi_cstep_trans_n1.
-      exact H2. clear H1 H2 H0.
+      exact H3. clear H1 H2 H0.
       pose proof CS_Ass.
       admit. (*没整出来*)
-
   +  destruct H.
-       unfold seq_sem in H; destruct H.
-      - destruct H as [ st3 [? ?]].
-         assert (exists EK : exit_kind, ceval c1 st1 EK st3). { exists EK_Normal. exact H. }
-         pose proof IHc1 _ _ H1.
-         pose proof (multi_congr_CSeq _ _ _ _ _ c2) H2 .
+       unfold seq_sem in H; destruct H as [ st3 [] ].
+      - pose proof IHc1 _ _ H.
+         pose proof (multi_congr_CSeq _ _ _ _ _ c2) H1 .
          pose proof CS_Seq st3 s c2.
-         pose proof multi_cstep_trans_n1 H3 H4. 
-         clear H4 H3 H2 H1 H IHc1.
+         pose proof multi_cstep_trans_n1 H2 H3. 
+         clear H3 H2 H1 H IHc1.
         eapply multi_cstep_trans.
-        exact H5. 
+        exact H4. 
         eapply IHc2. firstorder.
       - destruct H.
-         assert (exists EK : exit_kind, ceval c1 st1 EK st2). { exists x. exact H. }
-         pose proof IHc1 _ _ H1.
-         pose proof (multi_congr_CSeq _ _ _ _ _ c2) H2 .
+         pose proof IHc1 _ _ H.
+         pose proof (multi_congr_CSeq _ _ _ _ _ c2) H1 .
          pose proof CS_Seq st2 s c2.
-         pose proof multi_cstep_trans_n1 H3 H4. 
-         clear H4 H3 H2 H1 H IHc1.
+         pose proof multi_cstep_trans_n1 H2 H3. 
+         clear H3 H2 H1 H IHc1.
         eapply multi_cstep_trans.
-        exact H5.
-        eapply IHc2.
-        pose proof (sentence_ignore st2 c2 _ ) H0.
-(*
-Lemma sentence_ignore: forall st1 c EK,
-                   EK<>EK_Normal -> ceval c st1 EK st1.
-*)
+        exact H4.
         firstorder.
-
   + unfold if_sem in H.
       pose proof semantic_equiv_bexp1 st1 b.
       destruct H0.
-      destruct H as [? [[? ?] | [? ?]]].
+      destruct H as [[? ?] | [? ?]].
       - specialize (H0 H2).
-         assert (exists EK : exit_kind, ceval c1 st1 EK st2). { exists x. exact H. }
-         pose proof IHc1 _ _ H3.
-         clear H H1 H2 H3 IHc1 IHc2.
+         pose proof IHc1 _ _ H.
+         clear H H1 H2 IHc1 IHc2.
          pose proof multi_congr_CIf st1 s _ _ c1 c2 H0.
          pose proof CS_IfTrue st1 s c1 c2.
          pose proof multi_cstep_trans_n1 H H1.
-         pose proof multi_cstep_trans H2 H4.
-         exact H3.
+         pose proof multi_cstep_trans H2 H3.
+         exact H4.
       - specialize (H1 H2).
-         assert (exists EK : exit_kind, ceval c2 st1 EK st2). { exists x. exact H. }
-         pose proof IHc2 _  _ H3.
-         clear H H0 H2 H3 IHc1 IHc2.
+         pose proof IHc2 _  _ H.
+         clear H H0 H2 IHc1 IHc2.
          pose proof (multi_congr_CIf st1 s  _ _ c1 c2) H1.
          pose proof CS_IfFalse st1 s c1 c2.
          pose proof multi_cstep_trans_n1 H H0.
-         pose proof multi_cstep_trans H2 H4.
-         exact H3.
-
-  + destruct H as [EK [? [? ?]]].
-      
-      pose proof semantic_equiv_iter_loop1.
-      pose proof CS_While.
+         pose proof multi_cstep_trans H2 H3.
+         exact H4.
+  + pose proof (semantic_equiv_iter_loop1 st1 EK_Normal st2 1%nat b c s) IHc.
 
 (*      specialize IHc with _ _ EK.
       pose proof (semantic_equiv_iter_loop1 _ _ _ _ _ _ _) (IHc _ _ EK).
@@ -1055,12 +1038,107 @@ Lemma sentence_ignore: forall st1 c EK,
     - exact IHc.
     - exact H.*)admit.
 
-  + destruct H as [? [? ?]].  admit.
-  + destruct H as [? [? ?]]. admit.
+  +   admit.
+  +  admit.
   + (*CFor 要单独拿出来（类似于 semantic_equiv_iter_loop1 不然展不开*)
       pose proof CS_For. admit.
   +  admit.
 Admitted.
+
+
+Theorem semantic_equiv_com1_Break: forall st1 st2 c s,
+ceval c st1 EK_Break st2  ->  exists c', multi_cstep (CNormal s c, st1) (CNormal s c', st2) /\ start_with_break c'.
+Proof.
+  intros.
+  revert st1 st2 H; induction c; intros; simpl in H.
+  + destruct H.  discriminate H0.
+  + destruct H as [? [? ?]].  discriminate H0.
+  + destruct H.
+      - destruct H as [st3 [? ?]].
+         pose proof (IHc2 _ _) H0.
+         destruct H1 as [c' [? ?]].
+         exists c'. split.
+         * pose proof (semantic_equiv_com1_Normal _  _ _ s) H.
+            pose proof multi_congr_CSeq.
+            pose proof (multi_congr_CSeq _ s _ _ _ c2) H3.
+            pose proof multi_cstep_trans_n1 H5 (CS_Seq st3 s c2).
+            pose proof multi_cstep_trans H6 H1.
+            exact H7.
+         * exact H2.
+      - destruct H. 
+         pose proof (IHc1 _ _) H.
+         destruct H1 as [c' [? ?]].
+         exists c'. split.
+         * admit.
+         * exact H2.
+  + pose proof semantic_equiv_bexp1 st1 b. destruct H0.
+      destruct H. 
+      - destruct H. pose proof H0 H2;clear H0 H1 H2.
+         pose proof (IHc1 _ _) H; clear IHc1 H.
+         destruct H0 as [c' [? ?]].
+         exists c'. split.
+         * pose proof (multi_congr_CIf _ s _ _ c1 c2) H3.
+            pose proof (CS_IfTrue st1 s c1 c2).
+            pose proof multi_cstep_trans_n1 H1 H2.
+            pose proof multi_cstep_trans H4 H.
+            exact H5.
+         * exact H0.
+      - destruct H. pose proof H1 H2;clear H0 H1 H2.
+         pose proof (IHc2 _ _) H; clear IHc1 H.
+         destruct H0 as [c' [? ?]].
+         exists c'. split.
+         * pose proof (multi_congr_CIf _ s _ _ c1 c2) H3.
+            pose proof (CS_IfFalse st1 s c1 c2).
+            pose proof multi_cstep_trans_n1 H1 H2.
+            pose proof multi_cstep_trans H4 H.
+            exact H5.
+         * exact H0.
+  + destruct H as [? [? ?]].
+      discriminate H0.
+  + destruct H.
+      rewrite H. 
+      exists (CBreak).
+      split.
+      eapply multi_cstep_refl.
+      apply SWB_Break.
+  + destruct H. discriminate H0.
+  + destruct H.
+      - admit.
+      - pose proof CS_For. admit. (*定义multi_congr_CFor*)
+  + destruct H.
+      - destruct H as [? [? ?]].
+         destruct H0 as [? [? ?]].
+         discriminate H1.
+      - destruct H.
+         pose proof (IHc _ _) H.
+         destruct H1 as [c' [? ?]].
+         exists c'. split.
+         admit. (*定义multi_congr_CDoWhile*)
+         exact H2.
+Admitted.
+
+Theorem semantic_equiv_com1_Cont: forall st1 st2 c s,
+ceval c st1 EK_Cont st2 -> exists c', multi_cstep (CNormal s c, st1) (CNormal s c', st2) /\ start_with_cont c'.
+Proof.
+Admitted.
+
+
+Theorem semantic_equiv_com1: forall st1 st2 c s,
+(ceval c st1 EK_Normal st2 ->  multi_cstep (CNormal s c, st1) (CNormal s CSkip, st2))  /\
+(ceval c st1 EK_Break st2  ->  exists c', multi_cstep (CNormal s c, st1) (CNormal s c', st2) /\ start_with_break c') /\
+(ceval c st1 EK_Cont st2 -> exists c', multi_cstep (CNormal s c, st1) (CNormal s c', st2) /\ start_with_cont c').
+Proof.
+  intros.
+  split.
+  eapply semantic_equiv_com1_Normal.
+  split.
+  eapply semantic_equiv_com1_Break.
+  eapply semantic_equiv_com1_Cont.
+Qed.
+
+
+
+
 (*   intros.
   revert st1 st2 H; induction c; intros; simpl in H.
   + unfold Relation_Operators.id in H.
@@ -1968,11 +2046,23 @@ Admitted.
 
 
 Theorem semantic_equiv_break: forall s c st1 st2,
-  exists c', multi_cstep (CNormal  s c, st1) (CNormal  s c', st2) /\ start_with_break c' -> ceval c st1 EK_Break st2.
-Proof.
+  (exists c', multi_cstep (CNormal  s c, st1) (CNormal  s c', st2) /\ start_with_break c') -> ceval c st1 EK_Break st2.
+Proof. 
 Admitted.
 
 Theorem semantic_equiv_cont: forall s c st1 st2,
-  exists c', multi_cstep (CNormal  s c, st1) (CNormal  s c', st2) /\ start_with_cont c'  -> ceval c st1 EK_Cont st2.
+  (exists c', multi_cstep (CNormal  s c, st1) (CNormal  s c', st2) /\ start_with_cont c')  -> ceval c st1 EK_Cont st2.
 Proof.
+  intros.
+  destruct H as [c' [? ?]].
+  Print start_with_cont.
+  induction H0.
+  + induction H.
+      - admit.
+      - admit.
+      - exact  IHclos_refl_trans1.
+  + induction H.
+      - admit.
+      - Search multi_cstep. 
+  
 Admitted.
