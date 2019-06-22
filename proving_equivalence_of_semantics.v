@@ -721,6 +721,8 @@ Theorem multi_congr_CSeq: forall st1 s c1 st1' c1' c2,
   multi_cstep (CNormal s (CSeq c1 c2), st1)
         (CNormal s (CSeq c1' c2), st1').
 Proof.
+Admitted.
+(* 
   intros.
   induction_n1 H.
   + apply multi_cstep_refl.
@@ -728,7 +730,7 @@ Proof.
     - exact IH.
     - apply CS_SeqStep.
       exact H0.
-Qed.
+Qed. *)
 
 Theorem multi_congr_CIf: forall st s b b' c1 c2,
   multi_bstep st b b' ->
@@ -834,6 +836,7 @@ Proof.
     pose proof AH_num (aeval a1 st).
     pose proof multi_congr_BEq2 _ _ _ _ H1 H0 as IH2.
     clear H H0 H1.
+    
     split; intros.
     - pose proof BS_Eq_True st _ _ H.
       pose proof multi_bstep_trans IH1 IH2.
@@ -962,6 +965,13 @@ Admitted.
 Qed.
  *)
 
+(*新加的 | 不保证能证明出来*)
+Lemma sentence_ignore: forall st c EK,
+                   EK<>EK_Normal -> ceval c st EK st.
+Proof.
+Admitted.
+
+(* *)
 
 Theorem semantic_equiv_com1: forall st1 st2 c s,
   (exists EK, ceval c st1 EK st2) -> multi_cstep (CNormal s c, st1) (CNormal s CSkip, st2).
@@ -975,19 +985,39 @@ Proof.
       assert (aeval a st1 = aeval a st1). {reflexivity. }
       pose proof semantic_equiv_aexp1 _ _ _ H0.
       pose proof (multi_congr_CAss _ s X _ _ ) H1.
-      (*pose proof CS_Ass.*)
-     (* assert ( multi_cstep  (CNormal s (CAss X (aeval a st1)), st1) (CNormal s Skip, st2)). admit.*)
       eapply multi_cstep_trans_n1.
       exact H2. clear H1 H2 H0.
       pose proof CS_Ass.
-      admit.
+      admit. (*没整出来*)
 
-  + destruct H.
+  +  destruct H.
        unfold seq_sem in H; destruct H.
-      - destruct H; destruct H.
-         admit.
+      - destruct H as [ st3 [? ?]].
+         assert (exists EK : exit_kind, ceval c1 st1 EK st3). { exists EK_Normal. exact H. }
+         pose proof IHc1 _ _ H1.
+         pose proof (multi_congr_CSeq _ _ _ _ _ c2) H2 .
+         pose proof CS_Seq st3 s c2.
+         pose proof multi_cstep_trans_n1 H3 H4. 
+         clear H4 H3 H2 H1 H IHc1.
+        eapply multi_cstep_trans.
+        exact H5. 
+        eapply IHc2. firstorder.
       - destruct H.
-         admit.
+         assert (exists EK : exit_kind, ceval c1 st1 EK st2). { exists x. exact H. }
+         pose proof IHc1 _ _ H1.
+         pose proof (multi_congr_CSeq _ _ _ _ _ c2) H2 .
+         pose proof CS_Seq st2 s c2.
+         pose proof multi_cstep_trans_n1 H3 H4. 
+         clear H4 H3 H2 H1 H IHc1.
+        eapply multi_cstep_trans.
+        exact H5.
+        eapply IHc2.
+        pose proof (sentence_ignore st2 c2 _ ) H0.
+(*
+Lemma sentence_ignore: forall st1 c EK,
+                   EK<>EK_Normal -> ceval c st1 EK st1.
+*)
+        firstorder.
 
   + unfold if_sem in H.
       pose proof semantic_equiv_bexp1 st1 b.
@@ -1012,8 +1042,11 @@ Proof.
          pose proof multi_cstep_trans H2 H4.
          exact H3.
 
-  + destruct H as [? [? ?]]. 
+  + destruct H as [EK [? [? ?]]].
+      
       pose proof semantic_equiv_iter_loop1.
+      pose proof CS_While.
+
 (*      specialize IHc with _ _ EK.
       pose proof (semantic_equiv_iter_loop1 _ _ _ _ _ _ _) (IHc _ _ EK).
       unfold Relation_Operators.omega_union in H.
@@ -1022,11 +1055,11 @@ Proof.
     - exact IHc.
     - exact H.*)admit.
 
-  + destruct H. admit.
-  + destruct H. admit.
+  + destruct H as [? [? ?]].  admit.
+  + destruct H as [? [? ?]]. admit.
   + (*CFor 要单独拿出来（类似于 semantic_equiv_iter_loop1 不然展不开*)
-      pose proof CS_For.
-  + 
+      pose proof CS_For. admit.
+  +  admit.
 Admitted.
 (*   intros.
   revert st1 st2 H; induction c; intros; simpl in H.
@@ -1842,11 +1875,9 @@ Proof.
       tauto.
 Qed.
 
-Theorem semantic_equiv_com2: forall s c st1 st2,
-  multi_cstep (CNormal  s c, st1) (CNormal  s CSkip, st2) -> (exists EK, ceval c st1 EK st2).
+Theorem semantic_equiv_com2: forall s c st1 EK st2,
+  multi_cstep (CNormal  s c, st1) (CNormal  s CSkip, st2) -> ceval c st1 EK st2.
 Proof.
-  intros.
-
 Admitted.
 (*   intros.
   revert st1 st2 H; induction c; intros.
@@ -1910,8 +1941,8 @@ Qed.
 (* ################################################################# *)
 (** * Final Theorem *)
 
-Theorem semantic_equiv: forall s c st1 st2,
-  (exists EK, ceval c st1 EK st2) <-> multi_cstep (CNormal  s c, st1) (CNormal  s CSkip, st2).
+Theorem semantic_equiv: forall s c st1 EK st2,
+  ceval c st1 EK st2 <-> multi_cstep (CNormal  s c, st1) (CNormal  s CSkip, st2).
 Proof.
   intros.
   split.
