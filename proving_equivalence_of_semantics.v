@@ -610,14 +610,20 @@ Proof.
       exact H0.
 Qed.
 
-Theorem multi_congr_CLoop: forall st s b b',
+Theorem multi_congr_CWhileLoop: forall st s b b' c1 c2,
   multi_bstep st b b' ->
   multi_cstep
-     (CLoopCond s b, st)
-        (CLoopCond s b', st).
+     (CLoopCond (Whileloop b c1 c2 :: s)%list b, st)
+        (CLoopCond (Whileloop b c1 c2 :: s)%list b', st).
 Proof.
-Admitted.
-
+  intros.
+  induction_n1 H.
+  + apply multi_cstep_refl.
+  + eapply multi_cstep_trans_n1.
+    - exact IH.
+    - apply CS_WhileStep.
+      exact H0.
+Qed.
 
 (* ################################################################# *)
 (** * From Denotations To Multi-step Relations *)
@@ -791,7 +797,7 @@ Proof.
     pose proof CS_While.
     pose proof semantic_equiv_bexp1 st1 b.
     firstorder.
-    pose proof multi_congr_CLoop st1 (Whileloop b c Skip :: s)%list b BFalse H3.
+    pose proof multi_congr_CWhileLoop st1 s b BFalse c Skip H3.
     pose proof CS_WhileFalse st1 s b c Skip.
     pose proof multi_cstep_trans_n1 H4 H5.
     exact H6.
@@ -2132,6 +2138,6 @@ Proof.
   intros.
   split.
   + admit. (*apply semantic_equiv_com1.*)
-  + apply semantic_equiv_com2.
+  + admit. (* apply semantic_equiv_com2 *)
 
 Admitted.
