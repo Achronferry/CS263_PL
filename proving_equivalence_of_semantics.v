@@ -889,7 +889,6 @@ Admitted.
 Qed.
  *)
 
-(*新加的 | 不保证能证明出来*)
 
 Lemma semantic_equiv_iter_loop2: forall st1 st2  c s  b n,
 iter_loop_body2 b (ceval c) n st1 st2 ->
@@ -991,12 +990,12 @@ Proof.
   + destruct H. discriminate H0.
   + destruct H. discriminate H0.
   + destruct H.
-    - destruct H as [st3 [? [? [? ?]]]].
-      pose proof semantic_equiv_iter_loop3 st1 st2 st3 c1 c2 c3 s b x H H0 IHc1 IHc2 IHc3.
-      pose proof (CS_For st1 s (For( c1; b; c2) c3 EndFor) c1 b _ _ _) (SWFL_For c1 b c2 c3).
-      eapply multi_cstep_trans_1n.
-      exact H3. exact H2.
-    - firstorder.
+    destruct H as [? [[n ?] ?]].
+    pose proof semantic_equiv_iter_loop3 st1 st2 x c1 c2 c3 s b n H H0 IHc1 IHc2 IHc3.
+    pose proof (CS_For st1 s (For( c1; b; c2) c3 EndFor) c1 b _ _ _) (SWFL_For c1 b c2 c3).
+    eapply multi_cstep_trans_1n.
+    exact H3.
+    exact H2.
   + destruct H as [? [] ].
     pose proof (CS_DoWhile st1 s (Do c While b EndWhile) b _ CSkip) (SWDL_Dowhile _ b).
     eapply multi_cstep_trans_1n.
@@ -1033,9 +1032,9 @@ Proof.
       destruct H1 as [c' [? ?]].
       exists (c';;c2)%imp. split.
       * eapply multi_congr_CSeq.
-         exact H1.
+        exact H1.
       * eapply SWB_Seq.
-         exact H2.
+        exact H2.
   + pose proof semantic_equiv_bexp1 st1 b. destruct H0.
     destruct H.
     - destruct H. pose proof H0 H2;clear H0 H1 H2.
@@ -1070,9 +1069,9 @@ Proof.
     apply SWB_Break.
   + destruct H. discriminate H0.
   + destruct H as [? [? [? ?]]].
-      discriminate H1.
+    discriminate H1.
   + destruct H as [?[]].
-      discriminate H0.
+    discriminate H0.
 Qed.
 
 
@@ -1103,9 +1102,9 @@ Proof.
       destruct H1 as [c' [? ?]].
       exists (c';;c2)%imp. split.
       * eapply multi_congr_CSeq.
-         exact H1.
+        exact H1.
       * eapply SWC_Seq.
-         exact H2.
+        exact H2.
   + pose proof semantic_equiv_bexp1 st1 b. destruct H0.
     destruct H.
     - destruct H. pose proof H0 H2;clear H0 H1 H2.
@@ -1141,9 +1140,9 @@ Proof.
     eapply multi_cstep_refl.
     apply SWC_Break.
   + destruct H as [? [? [? ?]]].
-      discriminate H1.
+    discriminate H1.
   + destruct H as [? []].
-      discriminate H0.
+    discriminate H0.
 Qed.
 
 Theorem semantic_equiv_com1: forall st1 st2 c s,
@@ -2194,7 +2193,6 @@ Theorem semantic_equiv_com2_trans: forall s c st1 st2,
 Proof.
   intros.
   destruct H.
-
 Admitted.
 
 Theorem semantic_equiv: forall s c st1 st2,
@@ -2210,4 +2208,4 @@ Proof.
   + apply semantic_equiv_com2.
   + apply semantic_equiv_com1.
   + apply semantic_equiv_com2.
-Admitted.
+Qed.
