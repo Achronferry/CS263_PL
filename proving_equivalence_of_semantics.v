@@ -586,6 +586,7 @@ Theorem multi_congr_CSeq: forall st1 s c1 st1' c1' c2,
   multi_cstep (CNormal s (CSeq c1 c2), st1)
         (CNormal s (CSeq c1' c2), st1').
 Proof.
+   intros.
 Admitted.
 (*   refine multi_cstep_ind_n1 multi_cstep _ _.
   + apply multi_cstep_refl.
@@ -862,6 +863,18 @@ Proof.
 Admitted.*)
 
 (* *)
+Lemma semantic_equiv_iter_loop3: forall st1 st2 st3 c1 c2 c3 s  b n,
+ceval c1 st1 EK_Normal st3 ->
+  iter_loop_body3 b (ceval c3) (ceval c2) n st3 st2 ->
+(forall st4 st5 : state,
+       ceval c1 st4 EK_Normal st5 -> multi_cstep (CNormal s c1, st4) (CNormal s Skip, st5)) ->
+(forall st4 st5 : state,
+       ceval c2 st4 EK_Normal st5 -> multi_cstep (CNormal s c2, st4) (CNormal s Skip, st5)) ->
+(forall st4 st5 : state,
+       ceval c3 st4 EK_Normal st5 -> multi_cstep (CNormal s c3, st4) (CNormal s Skip, st5))->
+multi_cstep  (CInit (Forloop c1 b c3 c2 Skip :: s)%list c1, st1)  (CNormal s Skip, st2).
+Proof.
+Admitted.
 
 Theorem semantic_equiv_com1_Normal: forall st1 st2 c s,
 ceval c st1 EK_Normal st2 ->  multi_cstep (CNormal s c, st1) (CNormal s CSkip, st2).
@@ -929,12 +942,14 @@ Proof.
   + destruct H. discriminate H0.
   + destruct H.
     - destruct H as [st3 [? [? [? ?]]]].
-(*CFor 要单独拿出来（类似于 semantic_equiv_iter_loop1 不然展不开*)
-      pose proof (CS_For st1 s (For( c1; b; c2) c3 EndFor) c1 b _ _ _) (SWFL_For c1 b c2 c3). 
-      admit.
+      pose proof semantic_equiv_iter_loop3 st1 st2 st3 c1 c2 c3 s b x H H0 IHc1 IHc2 IHc3.
+      pose proof (CS_For st1 s (For( c1; b; c2) c3 EndFor) c1 b _ _ _) (SWFL_For c1 b c2 c3).
+      eapply multi_cstep_trans_1n.
+      exact H3. exact H2. 
     - firstorder.
-  + destruct H as [? []].
+  + destruct H as [? [] ].
 Admitted.
+
 
 
 Theorem semantic_equiv_com1_Break: forall st1 st2 c s,
@@ -1060,7 +1075,12 @@ Proof.
     apply SWC_Break.
   + destruct H.
     - destruct H as [? [? [? []]]]. discriminate H1.
-    - pose proof CS_For. admit. (*定义multi_congr_CFor*)
+    - destruct H.
+ 
+       pose proof CS_For.
+       admit. (*定义multi_congr_CFor*)
+
+
   + destruct H as [? []].
       discriminate H0.
 
@@ -1182,7 +1202,7 @@ Proof.
   apply Operators_Properties.clos_rt_rt1n_iff in H.
   inversion H; subst.
   + split; reflexivity.
-  + inversion H0.
+  +   admit.
 Admitted.
 
 Lemma CBreak_halt: forall st st' c s,
@@ -1195,6 +1215,7 @@ Proof.
   inversion H; subst.
   + split; reflexivity.
   + inversion H0.
+      
 Admitted.
 
 Lemma CCont_halt: forall st st' c s,
@@ -2116,12 +2137,5 @@ Admitted.
 (* ################################################################# *)
 (** * Final Theorem *)
 
-Theorem semantic_equiv: forall s c st1 EK st2,
-  ceval c st1 EK st2 <-> multi_cstep (CNormal  s c, st1) (CNormal  s CSkip, st2).
-Proof.
-  intros.
-  split.
-  + admit. (*apply semantic_equiv_com1.*)
-  + admit. (* apply semantic_equiv_com2 *)
 
 Admitted.
