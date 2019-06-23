@@ -1808,14 +1808,22 @@ Lemma CWhile_path_spec: forall s b c1 st1 st2,
   multi_cstep (CNormal s (CWhile b c1), st1) (CNormal  s CSkip, st2) ->
   exists n, CWhile_path s b c1 st1 st2 n.
 Proof.
-Admitted.
-(*   intros.
+  intros.
   remember (CWhile b c1) as c eqn:H0.
   remember CSkip as c' eqn:H1.
   revert b c1 H0 H1.
-  pose proof CWhile_path_spec_aux st1 st2 c c'.
-  tauto.
-Qed. *)
+  pose proof CWhile_path_spec_aux s st1 st2 (CNormal s c) (CNormal s c') H.
+  destruct H0 as [? [? ?]].
+  intros.
+  specialize H0 with b c1.
+  destruct H0.
+  rewrite H3.
+  reflexivity.
+  rewrite H4.
+  reflexivity.
+  exists x.
+  exact H0.
+Qed.
 
 (* ################################################################# *)
 (** * From Multi-step Relations To Denotations *)
