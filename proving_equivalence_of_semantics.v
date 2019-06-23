@@ -7,141 +7,6 @@ Arguments clos_refl_trans {A} _ _ _.
 Arguments clos_refl_trans_1n {A} _ _ _.
 Arguments clos_refl_trans_n1 {A} _ _ _.
 
-
-(* ################################################################# *)
-(** * Semantic Equavalence: Brief Idea *)
-
-(** This time we will prove the equivalence between denotational semantics and
-step step semantics. If you forget the detailed definition, you can always use
-the [Print] command in Coq for help. *)
-
-(* Print aeval. *)
-(* Print beval. *)
-(* Print ceval. *)
-(* Print astep. *)
-(* Print bstep. *)
-(* Print cstep. *)
-(* Print multi_astep. *)
-(* Print multi_bstep. *)
-(* Print multi_cstep. *)
-
-(** We will prove:
-
-    Theorem semantic_equiv: forall c st1 st2,
-      ceval c st1 st2 <-> multi_cstep (c, st1) (CSkip, st2).
-
-That is, the binary relation between denotational semantics is the same as the
-one defined by multi-step relation. *)
-
-(** To prove this theorem, we need to prove two separate facts: the derivation
-from the left hand side to the right hand side and from the right hand side to
-the left hand side. *)
-
-(* ================================================================= *)
-(** ** => *)
-
-(** For this direction, the main idea is to do induction over the syntax tree
-of [c]. A typical induction step is as follows.
-
-    IHc1: forall st1 st2,
-            ceval c1 st1 st2 -> multi_cstep (c1, st1) (CSkip, st2)
-    IHc2: forall st1 st2,
-            ceval c2 st1 st2 -> multi_cstep (c1, st1) (CSkip, st2)
-    ----
-    To prove: forall st1 st2,
-        ceval (c1 ;; c2) st1 st2 -> multi_cstep (c1 ;; c2, st1) (CSkip, st2).
-
-From the fact that [ceval (c1 ;; c2) st1 st2], we know that there exists an
-intermidiate state [st3] such that [ceval c1 st1 st3] and [ceval c2 st3 st2].
-Then by induction hypothese, we know the following two facts:
-
-    multi_cstep (c1, st1) (CSkip, st3)
-    multi_cstep (c2, st3) (CSkip, st2).
-
-Then according to the multi-step relation's congruence property on sequential
-composition, we know that
-
-    multi_cstep (c1 ;; c2, st1) (CSkip;; c2, st3)
-
-Adding [cstep (CSkip;; c2, st3) (c2, st3)], we achieve
-
-    multi_cstep (c1 ;; c2, st1) (CSkip, st2).
-
-In this process, we use [multi_cstep]'s the congruence property that we have
-proved last time. In other induction steps, we also need semantic equivalence
-theorem for [aexp] and [bexp], i.e.,
-
-    Theorem semantic_equiv_bexp1: forall st b,
-      (beval b st -> multi_bstep st b BTrue) /\
-      (~ beval b st -> multi_bstep st b BFalse).
-
-    Theorem semantic_equiv_aexp1: forall st a n,
-      aeval a st = n -> multi_astep st a (ANum n).
-*)
-
-(* ================================================================= *)
-(** ** <= *)
-
-(** For the reverse direction, we can also do induction over [c]'s structure.
-If we still use sequential composition [CSeq] as an example, what we need to
-prove is:
-
-    IHc1: forall st1 st2,
-            multi_cstep (c1, st1) (CSkip, st2) -> ceval c1 st1 st2
-    IHc2: forall st1 st2,
-            multi_cstep (c1, st1) (CSkip, st2) -> ceval c2 st1 st2
-    ----
-    To prove: forall st1 st2,
-        multi_cstep (c1 ;; c2, st1) (CSkip, st2) -> ceval (c1 ;; c2) st1 st2.
-
-The key point is: suppose [multi_cstep (c1 ;; c2, st1) (CSkip, st2)], this path
-of program execution must contain the following two intermediate status:
-
-    (CSkip;; c2, st3)
-    (c2, st3)
-
-for some program state [st3]. Furthermore, we can construct another path from
-[(c1, st1)] to [(CSkip, st3)] based on the path from [(c1;; c2, st1)] to
-[(CSkip;; c2, st3)]. This whole property can be formally stated as follows:
-
-    Lemma CSeq_path_spec: forall c1 st1 c2 st2,
-      multi_cstep (CSeq c1 c2, st1) (CSkip, st2) ->
-      exists st3,
-      multi_cstep (c1, st1) (CSkip, st3) /\
-      multi_cstep (c2, st3) (CSkip, st2).
-
-Then we can prove our goal easily using two induction hypotheses.
-
-In general, in the proof of all different induction steps, we need to prove
-different path properties for different commands. *)
-
-(* ================================================================= *)
-(** ** <=: Alternative proof *)
-
-(** To show:
-
-    Theorem semantic_equiv_com2: forall c st1 st2,
-      multi_cstep (c, st1) (CSkip, st2) -> ceval c st1 st2.
-
-We have another proof strategy besides doing induction over [c]. We can do
-induction over the steps from [(c, st1)] to [(CSkip, st2)] instead.
-Specifically, we first prove:
-
-    Lemma ceval_preserve: forall c1 c2 st1 st2,
-      cstep (c1, st1) (c2, st2) ->
-      forall st3, ceval c2 st2 st3 -> ceval c1 st1 st3;
-
-by induction over "how [cstep]" is constructed. Then we generalize it to:
-
-    Lemma ceval_preserve': forall c1 c2 st1 st2,
-      multi_cstep (c1, st1) (c2, st2) ->
-      forall st3, ceval c2 st2 st3 -> ceval c1 st1 st3;
-
-by induction over the steps. Our eventual goal [semantic_equiv_com2] immediately
-follows.
-
-Now, we demonstrate our proofs in Coq. *)
-
 (* ################################################################# *)
 (** * Auxiliary Lemmas For Constructing Multi-step Relations *)
 
@@ -722,9 +587,7 @@ Theorem multi_congr_CSeq: forall st1 s c1 st1' c1' c2,
         (CNormal s (CSeq c1' c2), st1').
 Proof.
 Admitted.
-(* 
-  intros.
-  induction_n1 H.
+(*   refine multi_cstep_ind_n1 multi_cstep _ _.
   + apply multi_cstep_refl.
   + eapply multi_cstep_trans_n1.
     - exact IH.
@@ -967,7 +830,7 @@ Qed.
 
 (*新加的 | 不保证能证明出来*)
 Lemma sentence_ignore: forall st c EK,
-                   EK<>EK_Normal -> ceval c st EK st.
+  EK<>EK_Normal -> ceval c st EK st.
 Proof.
 Admitted.
 
@@ -979,55 +842,55 @@ Proof.
   intros.
   revert st1 st2 H; induction c; intros; simpl in H.
   + unfold skip_sem in H; destruct H.
-      rewrite H.
-      eapply rt_refl.
+    rewrite H.
+    eapply rt_refl.
   + unfold asgn_sem in H; destruct H.
-      assert (aeval a st1 = aeval a st1). {reflexivity. }
-      pose proof semantic_equiv_aexp1 _ _ _ H1.
-      pose proof (multi_congr_CAss _ s X _ _ ) H2.
-      eapply multi_cstep_trans_n1.
-      exact H3. clear H1 H2 H0.
-      pose proof CS_Ass.
-      admit. (*没整出来*)
-  +  destruct H.
-       unfold seq_sem in H; destruct H as [ st3 [] ].
-      - pose proof IHc1 _ _ H.
-         pose proof (multi_congr_CSeq _ _ _ _ _ c2) H1 .
-         pose proof CS_Seq st3 s c2.
-         pose proof multi_cstep_trans_n1 H2 H3. 
-         clear H3 H2 H1 H IHc1.
-        eapply multi_cstep_trans.
-        exact H4. 
-        eapply IHc2. firstorder.
-      - destruct H.
-         pose proof IHc1 _ _ H.
-         pose proof (multi_congr_CSeq _ _ _ _ _ c2) H1 .
-         pose proof CS_Seq st2 s c2.
-         pose proof multi_cstep_trans_n1 H2 H3. 
-         clear H3 H2 H1 H IHc1.
-        eapply multi_cstep_trans.
-        exact H4.
-        firstorder.
+    assert (aeval a st1 = aeval a st1). {reflexivity. }
+    pose proof semantic_equiv_aexp1 _ _ _ H1.
+    pose proof (multi_congr_CAss _ s X _ _ ) H2.
+    eapply multi_cstep_trans_n1.
+    exact H3. clear H1 H2 H0.
+    pose proof CS_Ass.
+    admit. (*没整出来*)
+  + destruct H.
+    unfold seq_sem in H; destruct H as [ st3 [] ].
+    - pose proof IHc1 _ _ H.
+      pose proof (multi_congr_CSeq _ _ _ _ _ c2) H1 .
+      pose proof CS_Seq st3 s c2.
+      pose proof multi_cstep_trans_n1 H2 H3. 
+      clear H3 H2 H1 H IHc1.
+      eapply multi_cstep_trans.
+      exact H4. 
+      eapply IHc2. firstorder.
+    - destruct H.
+      pose proof IHc1 _ _ H.
+      pose proof (multi_congr_CSeq _ _ _ _ _ c2) H1 .
+      pose proof CS_Seq st2 s c2.
+      pose proof multi_cstep_trans_n1 H2 H3. 
+      clear H3 H2 H1 H IHc1.
+      eapply multi_cstep_trans.
+      exact H4.
+      firstorder.
   + unfold if_sem in H.
-      pose proof semantic_equiv_bexp1 st1 b.
-      destruct H0.
-      destruct H as [[? ?] | [? ?]].
-      - specialize (H0 H2).
-         pose proof IHc1 _ _ H.
-         clear H H1 H2 IHc1 IHc2.
-         pose proof multi_congr_CIf st1 s _ _ c1 c2 H0.
-         pose proof CS_IfTrue st1 s c1 c2.
-         pose proof multi_cstep_trans_n1 H H1.
-         pose proof multi_cstep_trans H2 H3.
-         exact H4.
-      - specialize (H1 H2).
-         pose proof IHc2 _  _ H.
-         clear H H0 H2 IHc1 IHc2.
-         pose proof (multi_congr_CIf st1 s  _ _ c1 c2) H1.
-         pose proof CS_IfFalse st1 s c1 c2.
-         pose proof multi_cstep_trans_n1 H H0.
-         pose proof multi_cstep_trans H2 H3.
-         exact H4.
+    pose proof semantic_equiv_bexp1 st1 b.
+    destruct H0.
+    destruct H as [[? ?] | [? ?]].
+    - specialize (H0 H2).
+      pose proof IHc1 _ _ H.
+      clear H H1 H2 IHc1 IHc2.
+      pose proof multi_congr_CIf st1 s _ _ c1 c2 H0.
+      pose proof CS_IfTrue st1 s c1 c2.
+      pose proof multi_cstep_trans_n1 H H1.
+      pose proof multi_cstep_trans H2 H3.
+      exact H4.
+    - specialize (H1 H2).
+      pose proof IHc2 _  _ H.
+      clear H H0 H2 IHc1 IHc2.
+      pose proof (multi_congr_CIf st1 s  _ _ c1 c2) H1.
+      pose proof CS_IfFalse st1 s c1 c2.
+      pose proof multi_cstep_trans_n1 H H0.
+      pose proof multi_cstep_trans H2 H3.
+      exact H4.
   + pose proof (semantic_equiv_iter_loop1 st1 EK_Normal st2 1%nat b c s) IHc.
 
 (*      specialize IHc with _ _ EK.
@@ -1038,10 +901,10 @@ Proof.
     - exact IHc.
     - exact H.*)admit.
 
-  +   admit.
+  +  admit.
   +  admit.
   + (*CFor 要单独拿出来（类似于 semantic_equiv_iter_loop1 不然展不开*)
-      pose proof CS_For. admit.
+     pose proof CS_For. admit.
   +  admit.
 Admitted.
 
@@ -1054,67 +917,67 @@ Proof.
   + destruct H.  discriminate H0.
   + destruct H as [? [? ?]].  discriminate H0.
   + destruct H.
-      - destruct H as [st3 [? ?]].
-         pose proof (IHc2 _ _) H0.
-         destruct H1 as [c' [? ?]].
-         exists c'. split.
-         * pose proof (semantic_equiv_com1_Normal _  _ _ s) H.
-            pose proof multi_congr_CSeq.
-            pose proof (multi_congr_CSeq _ s _ _ _ c2) H3.
-            pose proof multi_cstep_trans_n1 H5 (CS_Seq st3 s c2).
-            pose proof multi_cstep_trans H6 H1.
-            exact H7.
-         * exact H2.
-      - destruct H. 
-         pose proof (IHc1 _ _) H.
-         destruct H1 as [c' [? ?]].
-         exists c'. split.
-         * admit.
-         * exact H2.
+    - destruct H as [st3 [? ?]].
+      pose proof (IHc2 _ _) H0.
+      destruct H1 as [c' [? ?]].
+      exists c'. split.
+      * pose proof (semantic_equiv_com1_Normal _  _ _ s) H.
+        pose proof multi_congr_CSeq.
+        pose proof (multi_congr_CSeq _ s _ _ _ c2) H3.
+        pose proof multi_cstep_trans_n1 H5 (CS_Seq st3 s c2).
+        pose proof multi_cstep_trans H6 H1.
+        exact H7.
+      * exact H2.
+    - destruct H. 
+      pose proof (IHc1 _ _) H.
+      destruct H1 as [c' [? ?]].
+      exists c'. split.
+      * admit.
+      * exact H2.
   + pose proof semantic_equiv_bexp1 st1 b. destruct H0.
-      destruct H. 
-      - destruct H. pose proof H0 H2;clear H0 H1 H2.
-         pose proof (IHc1 _ _) H; clear IHc1 H.
-         destruct H0 as [c' [? ?]].
-         exists c'. split.
-         * pose proof (multi_congr_CIf _ s _ _ c1 c2) H3.
-            pose proof (CS_IfTrue st1 s c1 c2).
-            pose proof multi_cstep_trans_n1 H1 H2.
-            pose proof multi_cstep_trans H4 H.
-            exact H5.
-         * exact H0.
-      - destruct H. pose proof H1 H2;clear H0 H1 H2.
-         pose proof (IHc2 _ _) H; clear IHc1 H.
-         destruct H0 as [c' [? ?]].
-         exists c'. split.
-         * pose proof (multi_congr_CIf _ s _ _ c1 c2) H3.
-            pose proof (CS_IfFalse st1 s c1 c2).
-            pose proof multi_cstep_trans_n1 H1 H2.
-            pose proof multi_cstep_trans H4 H.
-            exact H5.
-         * exact H0.
+    destruct H. 
+    - destruct H. pose proof H0 H2;clear H0 H1 H2.
+      pose proof (IHc1 _ _) H; clear IHc1 H.
+      destruct H0 as [c' [? ?]].
+      exists c'. split.
+      * pose proof (multi_congr_CIf _ s _ _ c1 c2) H3.
+        pose proof (CS_IfTrue st1 s c1 c2).
+        pose proof multi_cstep_trans_n1 H1 H2.
+        pose proof multi_cstep_trans H4 H.
+        exact H5.
+      * exact H0.
+    - destruct H. pose proof H1 H2;clear H0 H1 H2.
+      pose proof (IHc2 _ _) H; clear IHc1 H.
+      destruct H0 as [c' [? ?]].
+      exists c'. split.
+      * pose proof (multi_congr_CIf _ s _ _ c1 c2) H3.
+        pose proof (CS_IfFalse st1 s c1 c2).
+        pose proof multi_cstep_trans_n1 H1 H2.
+        pose proof multi_cstep_trans H4 H.
+        exact H5.
+      * exact H0.
   + destruct H as [? [? ?]].
-      discriminate H0.
+    discriminate H0.
   + destruct H.
-      rewrite H. 
-      exists (CBreak).
-      split.
-      eapply multi_cstep_refl.
-      apply SWB_Break.
+    rewrite H. 
+    exists (CBreak).
+    split.
+    eapply multi_cstep_refl.
+    apply SWB_Break.
   + destruct H. discriminate H0.
   + destruct H.
-      - admit.
-      - pose proof CS_For. admit. (*定义multi_congr_CFor*)
+    - admit.
+    - pose proof CS_For. admit. (*定义multi_congr_CFor*)
   + destruct H.
-      - destruct H as [? [? ?]].
-         destruct H0 as [? [? ?]].
-         discriminate H1.
-      - destruct H.
-         pose proof (IHc _ _) H.
-         destruct H1 as [c' [? ?]].
-         exists c'. split.
-         admit. (*定义multi_congr_CDoWhile*)
-         exact H2.
+    - destruct H as [? [? ?]].
+      destruct H0 as [? [? ?]].
+      discriminate H1.
+    - destruct H.
+      pose proof (IHc _ _) H.
+      destruct H1 as [c' [? ?]].
+      exists c'. split.
+      admit. (*定义multi_congr_CDoWhile*)
+      exact H2.
 Admitted.
 
 Theorem semantic_equiv_com1_Cont: forall st1 st2 c s,
@@ -1129,11 +992,8 @@ Theorem semantic_equiv_com1: forall st1 st2 c s,
 (ceval c st1 EK_Cont st2 -> exists c', multi_cstep (CNormal s c, st1) (CNormal s c', st2) /\ start_with_cont c').
 Proof.
   intros.
-  split.
-  eapply semantic_equiv_com1_Normal.
-  split.
-  eapply semantic_equiv_com1_Break.
-  eapply semantic_equiv_com1_Cont.
+  split; [eapply semantic_equiv_com1_Normal|].
+  split; [eapply semantic_equiv_com1_Break|eapply semantic_equiv_com1_Cont].
 Qed.
 
 
