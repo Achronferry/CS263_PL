@@ -889,9 +889,10 @@ Proof.
     pose proof semantic_equiv_aexp1 _ _ _ H1.
     pose proof (multi_congr_CAss _ s X _ _ ) H2.
     eapply multi_cstep_trans_n1.
-    exact H3. clear H1 H2 H0.
-    pose proof CS_Ass.
-    admit. (*没整出来*)
+    exact H3.
+    destruct H0.
+    rewrite <- H.
+    apply CS_Ass; [reflexivity|exact H4].
   + destruct H.
     unfold seq_sem in H; destruct H as [ st3 [] ].
     - pose proof IHc1 _ _ H.
