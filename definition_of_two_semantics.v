@@ -82,12 +82,13 @@ Fixpoint iter_loop_body2
      fun st1 st3 =>
       ((exists st2,
          (loop_body) st1 EK_Normal st2 /\
-         (iter_loop_body2 b loop_body n') st2 st3) \/
+         (iter_loop_body2 b loop_body n') st2 st3 /\ 
+         beval b st2) \/
        (loop_body) st1 EK_Break st3 \/
        (exists st2,
          (loop_body) st1 EK_Cont st2 /\
-         (iter_loop_body2 b loop_body n') st2 st3)) /\
-       beval b st3
+         (iter_loop_body2 b loop_body n') st2 st3 /\
+         beval b st2))
   end.
 
 Definition loop_sem2 (b: bexp) (loop_body: state -> exit_kind -> state -> Prop)

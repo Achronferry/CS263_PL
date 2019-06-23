@@ -876,9 +876,10 @@ Proof.
     pose proof semantic_equiv_aexp1 _ _ _ H1.
     pose proof (multi_congr_CAss _ s X _ _ ) H2.
     eapply multi_cstep_trans_n1.
-    exact H3. clear H1 H2 H0.
-    pose proof CS_Ass.
-    admit. (*没整出来*)
+    exact H3.
+    destruct H0.
+    rewrite <- H.
+    apply CS_Ass; [reflexivity|exact H4].
   + destruct H.
     unfold seq_sem in H; destruct H as [ st3 [] ].
     - pose proof IHc1 _ _ H.
@@ -928,7 +929,6 @@ Proof.
   + destruct H. discriminate H0.
   + destruct H.
     - destruct H as [st3 [? [? [? ?]]]].
-
 (*CFor 要单独拿出来（类似于 semantic_equiv_iter_loop1 不然展不开*)
       pose proof (CS_For st1 s (For( c1; b; c2) c3 EndFor) c1 b _ _ _) (SWFL_For c1 b c2 c3). 
       admit.
