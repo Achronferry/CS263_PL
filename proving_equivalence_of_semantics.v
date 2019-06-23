@@ -933,8 +933,7 @@ Proof.
       pose proof (CS_For st1 s (For( c1; b; c2) c3 EndFor) c1 b _ _ _) (SWFL_For c1 b c2 c3). 
       admit.
     - firstorder.
-  + destruct H.
-    - destruct H as [st3 [? ?]]. admit.
+  + destruct H as [? []].
 Admitted.
 
 
@@ -1000,16 +999,8 @@ Proof.
       pose proof IHc1 _ _ H.
       destruct H1 as [c' []].
       admit. (*定义multi_congr_CFor*)
-  + destruct H.
-    - destruct H as [? [? ?]].
-      destruct H0 as [? [? ?]].
-      discriminate H1.
-    - destruct H.
-      pose proof (IHc _ _) H.
-      destruct H1 as [c' [? ?]].
-      exists c'. split.
-      admit. (*定义multi_congr_CDoWhile*)
-      exact H2.
+  + destruct H as [?[]].
+      discriminate H0.
 Admitted.
 
 Theorem semantic_equiv_com1_Cont: forall st1 st2 c s,
@@ -1070,16 +1061,9 @@ Proof.
   + destruct H.
     - destruct H as [? [? [? []]]]. discriminate H1.
     - pose proof CS_For. admit. (*定义multi_congr_CFor*)
-  + destruct H.
-    - destruct H as [? [? ?]].
-      destruct H0 as [? [? ?]].
-      discriminate H1.
-    - destruct H.
-      pose proof (IHc _ _) H.
-      destruct H1 as [c' [? ?]].
-      exists c'. split.
-      admit. (*定义multi_congr_CDoWhile*)
-      exact H2.
+  + destruct H as [? []].
+      discriminate H0.
+
 Admitted.
 
 
