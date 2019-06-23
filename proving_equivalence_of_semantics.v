@@ -822,7 +822,6 @@ Proof.
     - destruct H0 as [st3 [? ?]].
       specialize (IHn st3 st2 H2).
       pose proof CS_While.
-      Print cstep.
       
 Admitted.
 (*   intros.
