@@ -122,11 +122,11 @@ Fixpoint iter_loop_body3
        beval b st1
   end.
 
-Definition loop_sem3 (b: bexp) (loop_body: state -> exit_kind -> state -> Prop) (variant: state -> exit_kind -> state -> Prop)
+Definition loop_sem3 (initial: state -> exit_kind -> state -> Prop) (b: bexp) (loop_body: state -> exit_kind -> state -> Prop) (variant: state -> exit_kind -> state -> Prop)
   : state -> exit_kind -> state -> Prop
 :=
   fun st1 ek st2 =>
-    exists n, (iter_loop_body3 b loop_body (variant: state -> exit_kind -> state -> Prop) n) st1 st2 /\ ek = EK_Normal.
+   exists st1',  (initial st1 EK_Normal st1') /\ (exists n, (iter_loop_body3 b loop_body (variant: state -> exit_kind -> state -> Prop) n) st1 st2) /\ ek = EK_Normal.
 
 
 
@@ -138,7 +138,7 @@ Fixpoint ceval (c: com): state -> exit_kind -> state -> Prop :=
   | CIf b c1 c2 => if_sem b (ceval c1) (ceval c2)
   | CWhile b c => loop_sem1 b (ceval c)
   | CDoWhile c b =>  loop_sem2 b (ceval c)
-  | CFor c1 b c2 c3 => seq_sem (ceval c1) (loop_sem3 b (ceval c3) (ceval c2))
+  | CFor c1 b c2 c3 => loop_sem3 (ceval c1) b (ceval c3) (ceval c2)
   | CBreak => break_sem
   | CCont => cont_sem
   end.

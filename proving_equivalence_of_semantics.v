@@ -587,6 +587,20 @@ Theorem multi_congr_CSeq: forall st1 s c1 st1' c1' c2,
         (CNormal s (CSeq c1' c2), st1').
 Proof.
    intros.
+  remember (CNormal s c1, st1) as x; remember (CNormal s c1', st1') as y.
+  revert s c1 c2 c1' st1 st1' Heqx Heqy.
+   induction H;intros.
+  + rewrite Heqx in H. rewrite Heqy in H. 
+      pose proof CS_SeqStep _ _ _ _ _ c2 H. 
+      eapply multi_cstep_step. exact H0.
+  + rewrite Heqy in Heqx. 
+      inversion Heqx.
+      eapply multi_cstep_refl.
+
+  + eapply IHclos_refl_trans2;subst.
+
+      - admit.
+      - reflexivity.
 Admitted.
 (*   refine multi_cstep_ind_n1 multi_cstep _ _.
   + apply multi_cstep_refl.
@@ -857,10 +871,6 @@ Qed.
 
 (*新加的 | 不保证能证明出来*)
 
-(*Lemma sentence_ignore: forall st c EK,
-                   EK<>EK_Normal -> ceval c st EK st.
-Proof.
-Admitted.*)
 Lemma semantic_equiv_iter_loop2: forall st1 st2  c s  b n,
 iter_loop_body2 b (ceval c) n st1 st2 ->
 (forall st3 st4 : state,
@@ -873,7 +883,7 @@ Admitted.
 (* *)
 Lemma semantic_equiv_iter_loop3: forall st1 st2 st3 c1 c2 c3 s  b n,(* 前提不是都要用*)
 ceval c1 st1 EK_Normal st3 ->
-  iter_loop_body3 b (ceval c3) (ceval c2) n st3 st2 ->
+  iter_loop_body3 b (ceval c3) (ceval c2) n st1 st2 ->
 (forall st4 st5 : state,
        ceval c1 st4 EK_Normal st5 -> multi_cstep (CNormal s c1, st4) (CNormal s Skip, st5)) ->
 (forall st4 st5 : state,
@@ -883,6 +893,7 @@ ceval c1 st1 EK_Normal st3 ->
 multi_cstep  (CInit (Forloop c1 b c3 c2 Skip :: s)%list c1, st1)  (CNormal s Skip, st2).
 Proof.
 Admitted.
+
 
 Theorem semantic_equiv_com1_Normal: forall st1 st2 c s,
 ceval c st1 EK_Normal st2 ->  multi_cstep (CNormal s c, st1) (CNormal s CSkip, st2).
@@ -948,13 +959,11 @@ Proof.
     exact H1.
   + destruct H. discriminate H0.
   + destruct H. discriminate H0.
-  + destruct H.
-    - destruct H as [st3 [? [? [? ?]]]].
-      pose proof semantic_equiv_iter_loop3 st1 st2 st3 c1 c2 c3 s b x H H0 IHc1 IHc2 IHc3.
+  + destruct H as [st3 [? [[n ?] ?]]].
+      pose proof semantic_equiv_iter_loop3 st1 st2 st3 c1 c2 c3 s b n H H0 IHc1 IHc2 IHc3.
       pose proof (CS_For st1 s (For( c1; b; c2) c3 EndFor) c1 b _ _ _) (SWFL_For c1 b c2 c3).
       eapply multi_cstep_trans_1n.
       exact H3. exact H2. 
-    - firstorder.
   + destruct H as [? [] ]. 
       pose proof (CS_DoWhile st1 s (Do c While b EndWhile) b _ CSkip) (SWDL_Dowhile _ b).
       eapply multi_cstep_trans_1n.
@@ -986,9 +995,11 @@ Proof.
     - destruct H. 
       pose proof (IHc1 _ _) H.
       destruct H1 as [c' [? ?]].
-      exists c'. split.
-      * admit.
-      * exact H2.
+      exists (c';;c2)%imp. split.
+      * eapply multi_congr_CSeq.
+         exact H1.
+      * eapply SWB_Seq.
+         exact H2.
   + pose proof semantic_equiv_bexp1 st1 b. destruct H0.
     destruct H. 
     - destruct H. pose proof H0 H2;clear H0 H1 H2.
@@ -1020,15 +1031,11 @@ Proof.
     eapply multi_cstep_refl.
     apply SWB_Break.
   + destruct H. discriminate H0.
-  + destruct H.
-    - destruct H as [st3 [? [? []]]]. discriminate H1.
-    - destruct H. 
-      pose proof IHc1 _ _ H.
-      destruct H1 as [c' []].
-      admit. (*定义multi_congr_CFor*)
+  + destruct H as [? [? [? ?]]].
+      discriminate H1.
   + destruct H as [?[]].
       discriminate H0.
-Admitted.
+Qed.
 
 Theorem semantic_equiv_com1_Cont: forall st1 st2 c s,
 ceval c st1 EK_Cont st2 -> exists c', multi_cstep (CNormal s c, st1) (CNormal s c', st2) /\ start_with_cont c'.
@@ -1052,9 +1059,11 @@ Proof.
     - destruct H. 
       pose proof (IHc1 _ _) H.
       destruct H1 as [c' [? ?]].
-      exists c'. split.
-      * admit.
-      * exact H2.
+      exists (c';;c2)%imp. split.
+      * eapply multi_congr_CSeq.
+         exact H1.
+      * eapply SWC_Seq.
+         exact H2.
   + pose proof semantic_equiv_bexp1 st1 b. destruct H0.
     destruct H. 
     - destruct H. pose proof H0 H2;clear H0 H1 H2.
@@ -1085,19 +1094,11 @@ Proof.
     split.
     eapply multi_cstep_refl.
     apply SWC_Break.
-  + destruct H.
-    - destruct H as [? [? [? []]]]. discriminate H1.
-    - destruct H.
- 
-       pose proof CS_For.
-       admit. (*定义multi_congr_CFor*)
-
-
+  + destruct H as [? [? [? ?]]].
+      discriminate H1.
   + destruct H as [? []].
       discriminate H0.
-
-Admitted.
-
+Qed.
 
 Theorem semantic_equiv_com1: forall st1 st2 c s,
 (ceval c st1 EK_Normal st2 ->  multi_cstep (CNormal s c, st1) (CNormal s CSkip, st2))  /\
