@@ -610,6 +610,15 @@ Proof.
       exact H0.
 Qed.
 
+Theorem multi_congr_CLoop: forall st s b b',
+  multi_bstep st b b' ->
+  multi_cstep
+     (CLoopCond s b, st)
+        (CLoopCond s b', st).
+Proof.
+Admitted.
+
+
 (* ################################################################# *)
 (** * From Denotations To Multi-step Relations *)
 
@@ -720,7 +729,6 @@ Proof.
     pose proof AH_num (aeval a1 st).
     pose proof multi_congr_BLe2 _ _ _ _ H1 H0 as IH2.
     clear H H0 H1.
-    
     split; intros.
     - pose proof BS_Le_True st _ _ H.
       pose proof multi_bstep_trans IH1 IH2.
@@ -771,13 +779,6 @@ Proof.
       exact H3.
 Qed.
 
-(* Theorem multi_congr_CLoop: forall st s b  c1 c2,
-  multi_cstep
-     (CLoopCond (Whileloop b c1 c2 :: s)%list b, st)
-        (CNormal s (If b Then c;; While b Do c EndWhile Else Skip EndIf), st).
-Proof.
-Admitted. *)
-
 Lemma semantic_equiv_iter_loop1: forall st1 EK st2 n b c s,
   (forall st1 st2, ceval c st1 EK st2 -> multi_cstep (CNormal s c, st1) (CNormal s CSkip, st2)) ->
   iter_loop_body1 b (ceval c) n st1 st2 ->
@@ -790,12 +791,12 @@ Proof.
     pose proof CS_While.
     pose proof semantic_equiv_bexp1 st1 b.
     firstorder.
-    pose proof (multi_congr_CIf _ s _ _ (c;; While b Do c EndWhile) Skip) H3.
-    pose proof CS_IfFalse st1 s (c;; While b Do c EndWhile) Skip.
+    pose proof multi_congr_CLoop st1 (Whileloop b c Skip :: s)%list b BFalse H3.
+    pose proof CS_WhileFalse st1 s b c Skip.
     pose proof multi_cstep_trans_n1 H4 H5.
-    Print CLoopCond.
+    exact H6.
+  + 
 Admitted.
-
 (*   intros.
   revert st1 st2 H0; induction n; intros.
   + simpl in H0.
@@ -1141,6 +1142,10 @@ Qed.
     - exact H.
 Qed. *)
 
+
+
+
+
 (* ################################################################# *)
 (** * Properties Of Execution Paths *)
 Local Open Scope Z.
@@ -1182,14 +1187,37 @@ Lemma CSkip_halt: forall st st' c s,
   multi_cstep(CNormal s CSkip, st) (CNormal s c, st') ->
   c = CSkip /\ st = st'.
 Proof.
-Admitted.
-(*   intros.
+  intros.
   unfold multi_cstep in H.
   apply Operators_Properties.clos_rt_rt1n_iff in H.
   inversion H; subst.
   + split; reflexivity.
   + inversion H0.
-Qed. *)
+Admitted.
+
+Lemma CBreak_halt: forall st st' c s,
+  multi_cstep(CNormal s (Break), st) (CNormal s c, st') ->
+  c = CBreak /\ st = st'.
+Proof.
+  intros.
+  unfold multi_cstep in H.
+  apply Operators_Properties.clos_rt_rt1n_iff in H.
+  inversion H; subst.
+  + split; reflexivity.
+  + inversion H0.
+Admitted.
+
+Lemma CCont_halt: forall st st' c s,
+  multi_cstep(CNormal s (Continue), st) (CNormal s c, st') ->
+  c = CCont /\ st = st'.
+Proof.
+  intros.
+  unfold multi_cstep in H.
+  apply Operators_Properties.clos_rt_rt1n_iff in H.
+  inversion H; subst.
+  + split; reflexivity.
+  + inversion H0.
+Admitted.
 
 Lemma APlus_path_spec: forall st a1 a2 n,
   multi_astep st (APlus a1 a2) (ANum n) ->
@@ -1903,69 +1931,190 @@ Proof.
       tauto.
 Qed.
 
-Theorem semantic_equiv_com2: forall s c st1 EK st2,
-  multi_cstep (CNormal  s c, st1) (CNormal  s CSkip, st2) -> ceval c st1 EK st2.
+Theorem semantic_equiv2: forall s c st1 st2,
+  (multi_cstep (CNormal  s c, st1) (CNormal  s CSkip, st2) -> ceval c st1 EK_Normal st2) /\
+  (exists c', multi_cstep (CNormal  s c, st1) (CNormal  s c', st2) /\ start_with_break c' -> ceval c st1 EK_Break st2) /\
+  (exists c', multi_cstep (CNormal  s c, st1) (CNormal  s c', st2) /\ start_with_cont c'  -> ceval c st1 EK_Cont st2).
 Proof.
-Admitted.
-(*   intros.
-  revert st1 st2 H; induction c; intros.
-  + apply CSkip_halt in H.
+  intros.
+  revert st1 st2; induction c; intros.
+  + repeat split.
+    - 
+    apply CSkip_halt in H.
     destruct H.
     rewrite H0.
-    simpl.
-    unfold Relation_Operators.id.
-    reflexivity.
-  + apply CAss_path_spec in H.
-    destruct H as [n [? [? ?]]].
-    apply semantic_equiv_aexp2 in H.
-    simpl.
-    rewrite H.
     tauto.
-  + apply CSeq_path_spec in H.
-    destruct H as [st1' [? ?]].
+    -
+    exists CBreak. intros.
+    destruct H.
+    apply CSkip_halt in H.
+    destruct H.
+    discriminate H.
+    -
+    exists CCont. intros.
+    destruct H.
+    apply CSkip_halt in H.
+    destruct H.
+    discriminate H.
+ +  split.
+      intros.
+      apply CAss_path_spec in H.
+      destruct H.
+      destruct H as [? [? ?]].
+      simpl.
+      unfold asgn_sem.
+      rewrite H0.
+      split.
+      apply semantic_equiv_aexp2 in H.
+      omega.
+      split.
+      tauto.
+      intros.
+      pose proof H1 _ H2.
+      tauto.
+      
+      split.
+      exists CSkip.
+      intros.
+      destruct H.
+      inversion H0.
+      
+      exists CSkip.
+      intros.
+      destruct H.
+      apply CAss_path_spec in H.
+      inversion H0.
+ + split.
+     intros.
+     apply CSeq_path_spec in H.
+     destruct H as [st1' [? ?]].
     apply IHc1 in H.
     apply IHc2 in H0.
     simpl.
-    unfold Relation_Operators.concat.
+    unfold seq_sem.
+    left.
     exists st1'.
     tauto.
-  + apply CIf_path_spec in H.
-    simpl.
+    
+    split;
+    exists CSkip;
+    intros;
+    destruct H;
+    inversion H0.
+ +
+  repeat split. intros.
+  apply CIf_path_spec in H.
+  destruct H as [[? ?] | [? ?]].
+      simpl;
     unfold if_sem.
-    unfold Relation_Operators.union,
-           Relation_Operators.intersection,
-           Relation_Operators.filter1.
-    specialize (IHc1 st1 st2).
-    specialize (IHc2 st1 st2).
+    - left.
+    split.
+    apply IHc1 in H0.
+    exact H0.
     pose proof semantic_equiv_bexp2 st1 b.
-    tauto.
-  + apply CWhile_path_spec in H.
-    simpl.
-    unfold loop_sem.
-    unfold Relation_Operators.omega_union.
-    destruct H as [n ?].
-    exists n.
-    revert st1 H; induction n; simpl; intros.
-    - pose proof semantic_equiv_bexp2 st1 b.
+    destruct H1.
+    pose proof H1 H.
+    exact H3.
+    
+    - right.
+    split.
+    apply IHc2 in H0.
+    exact H0.
+    pose proof semantic_equiv_bexp2 st1 b.
+    destruct H1.
+    pose proof H2 H.
+    exact H3.
+    
+    -
+    exists CSkip.
+    intros.
+    destruct H.
+    inversion H0.
+    - exists CSkip.
+    intros.
+    destruct H.
+    inversion H0.
+  + repeat split.
+      intros.
+      apply CWhile_path_spec in H.
+      simpl.
+      unfold loop_sem1.
       destruct H.
+      exists x.
+      split.
+    revert st1 st2 H; induction x; simpl; intros.
+    - pose proof semantic_equiv_bexp2 st1 b.
+    destruct H.
+      destruct H0.
+      pose proof H2 H.
       subst st2.
-      unfold Relation_Operators.intersection,
-             Relation_Operators.id,
-             Relation_Operators.filter1.
       tauto.
     - destruct H as [st1' [? [? ?]]].
-      specialize (IHn st1').
-      unfold Relation_Operators.intersection,
-             Relation_Operators.concat,
-             Relation_Operators.filter1.
+      specialize (IHx st1' st2).
       apply semantic_equiv_bexp2 in H.
       split.
-      * exists st1'.
+      *left. exists st1'.
         specialize (IHc st1 st1').
         tauto.
       * exact H.
-Qed.
- *)
+     - tauto.
+     - exists CSkip.
+     intros.
+     destruct H.
+     inversion H0.
+     - exists CSkip.
+     intros.
+     destruct H.
+     inversion H0.
+  + 
+  split.
+  intros.
+  apply CBreak_halt in H.
+  destruct H.
+  inversion H.
+  
+  split.
+  exists CBreak.
+  intros.
+  destruct H.
+  apply CBreak_halt in H.
+  simpl.
+  unfold break_sem.
+  tauto.
+  
+  exists CBreak.
+  intros.
+  destruct H.
+  apply CBreak_halt in H.
+  destruct H.
+  inversion H0.
+  + 
+    split.
+  intros.
+  apply CCont_halt in H.
+  destruct H.
+  inversion H.
+  
+  split.
+  exists CBreak.
+  intros.
+  destruct H.
+  apply CCont_halt in H.
+  destruct H.
+  inversion H.
+  
+  exists CCont.
+  intros.
+  destruct H.
+  apply CCont_halt in H.
+  destruct H.
+  simpl.
+  unfold cont_sem.
+  tauto.
+
+ + admit.
+ + admit.
+Admitted.
 (* ################################################################# *)
 (** * Final Theorem *)
 
@@ -1977,42 +2126,4 @@ Proof.
   + admit. (*apply semantic_equiv_com1.*)
   + apply semantic_equiv_com2.
 
-Admitted.
-
-
-
-
-
-
-
-
-
-
-
-Theorem semantic_equiv_normal: forall s c st1 st2,
-  multi_cstep (CNormal  s c, st1) (CNormal  s CSkip, st2) -> ceval c st1 EK_Normal st2.
-Proof.
-Admitted.
-
-
-Theorem semantic_equiv_break: forall s c st1 st2,
-  (exists c', multi_cstep (CNormal  s c, st1) (CNormal  s c', st2) /\ start_with_break c') -> ceval c st1 EK_Break st2.
-Proof. 
-Admitted.
-
-Theorem semantic_equiv_cont: forall s c st1 st2,
-  (exists c', multi_cstep (CNormal  s c, st1) (CNormal  s c', st2) /\ start_with_cont c')  -> ceval c st1 EK_Cont st2.
-Proof.
-  intros.
-  destruct H as [c' [? ?]].
-  Print start_with_cont.
-  induction H0.
-  + induction H.
-      - admit.
-      - admit.
-      - exact  IHclos_refl_trans1.
-  + induction H.
-      - admit.
-      - Search multi_cstep. 
-  
 Admitted.
