@@ -861,9 +861,17 @@ Qed.
                    EK<>EK_Normal -> ceval c st EK st.
 Proof.
 Admitted.*)
+Lemma semantic_equiv_iter_loop2: forall st1 st2  c s  b n,
+iter_loop_body2 b (ceval c) n st1 st2 ->
+(forall st3 st4 : state,
+      ceval c st3 EK_Normal st4 -> multi_cstep (CNormal s c, st3) (CNormal s Skip, st4)) ->
+multi_cstep (CNormal (Dowhileloop c b Skip :: s)%list c, st1) (CNormal s Skip, st2).
+Proof.
+Admitted.
+
 
 (* *)
-Lemma semantic_equiv_iter_loop3: forall st1 st2 st3 c1 c2 c3 s  b n,
+Lemma semantic_equiv_iter_loop3: forall st1 st2 st3 c1 c2 c3 s  b n,(* 前提不是都要用*)
 ceval c1 st1 EK_Normal st3 ->
   iter_loop_body3 b (ceval c3) (ceval c2) n st3 st2 ->
 (forall st4 st5 : state,
@@ -947,9 +955,13 @@ Proof.
       eapply multi_cstep_trans_1n.
       exact H3. exact H2. 
     - firstorder.
-  + destruct H as [? [] ].
-Admitted.
-
+  + destruct H as [? [] ]. 
+      pose proof (CS_DoWhile st1 s (Do c While b EndWhile) b _ CSkip) (SWDL_Dowhile _ b).
+      eapply multi_cstep_trans_1n.
+      exact H1.
+      pose proof (semantic_equiv_iter_loop2 _ _ _ _ _ _) H IHc.
+      exact H2.
+Qed.
 
 
 Theorem semantic_equiv_com1_Break: forall st1 st2 c s,
@@ -2137,5 +2149,7 @@ Admitted.
 (* ################################################################# *)
 (** * Final Theorem *)
 
-
-Admitted.
+Lemma Goldbach: 1+1 = 2.
+Proof.
+  omega.
+Qed.
