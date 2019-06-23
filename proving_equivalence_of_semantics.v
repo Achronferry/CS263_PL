@@ -1154,65 +1154,6 @@ Proof.
   split; [eapply semantic_equiv_com1_Break|eapply semantic_equiv_com1_Cont].
 Qed.
 
-
-
-
-(*   intros.
-  revert st1 st2 H; induction c; intros; simpl in H.
-  + unfold Relation_Operators.id in H.
-    rewrite H.
-    apply multi_cstep_refl.
-  + destruct H.
-    assert (aeval a st1 = aeval a st1).
-    { reflexivity. }
-    pose proof semantic_equiv_aexp1 _ _ _ H1.
-    pose proof multi_congr_CAss st1 X _ _ H2.
-    pose proof CS_Ass _ _ _ _ H H0.
-    pose proof multi_cstep_trans_n1 H3 H4.
-    exact H5.
-  + unfold Relation_Operators.concat in H.
-    destruct H as [st' [? ?]].
-    specialize (IHc1 _ _ H).
-    specialize (IHc2 _ _ H0).
-    pose proof multi_congr_CSeq _ _ _ _ c2 IHc1.
-    pose proof CS_Seq st' c2.
-    pose proof multi_cstep_trans_n1 H1 H2.
-    pose proof multi_cstep_trans H3 IHc2.
-    exact H4.
-  + unfold if_sem in H.
-    unfold Relation_Operators.union, Relation_Operators.intersection,
-           Relation_Operators.filter1 in H.
-    pose proof semantic_equiv_bexp1 st1 b.
-    destruct H0.
-    destruct H as [[? ?] | [? ?]].
-    - specialize (H0 H2).
-      pose proof IHc1 _ _ H.
-      clear H H1 H2 IHc1 IHc2.
-      pose proof multi_congr_CIf _ _ _ c1 c2 H0.
-      pose proof CS_IfTrue st1 c1 c2.
-      pose proof multi_cstep_trans_n1 H H1.
-      pose proof multi_cstep_trans H2 H3.
-      exact H4.
-    - specialize (H1 H2).
-      pose proof IHc2 _ _ H.
-      clear H H0 H2 IHc1 IHc2.
-      pose proof multi_congr_CIf _ _ _ c1 c2 H1.
-      pose proof CS_IfFalse st1 c1 c2.
-      pose proof multi_cstep_trans_n1 H H0.
-      pose proof multi_cstep_trans H2 H3.
-      exact H4.
-  + unfold loop_sem in H.
-    unfold Relation_Operators.omega_union in H.
-    destruct H as [n ?].
-    apply semantic_equiv_iter_loop1 with n.
-    - exact IHc.
-    - exact H.
-Qed. *)
-
-
-
-
-
 (* ################################################################# *)
 (** * Properties Of Execution Paths *)
 Local Open Scope Z.
@@ -1259,28 +1200,28 @@ Proof.
   remember (CNormal s c, st') as C''.
   revert HeqC' HeqC'' .
   revert c s st st'.
-  induction H; intros; split;subst.
+  induction H; intros; split; subst.
   + inversion H;
-  subst.
-   - inversion H1.
-   - admit.
-   - admit.
-   - inversion H1.
-   - inversion H1.
-   - inversion H1.
+    subst.
+    - inversion H1.
+    - admit.
+    - admit.
+    - inversion H1.
+    - inversion H1.
+    - inversion H1.
   + inversion H; subst.
-      - reflexivity.
-      - admit.
-      - reflexivity.
-      - reflexivity.
-      - reflexivity.
-      - reflexivity.
-   + inversion HeqC''.
-      reflexivity.
-   + inversion HeqC''.
-      reflexivity.
-    + admit.
-    + admit.
+    - reflexivity.
+    - admit.
+    - reflexivity.
+    - reflexivity.
+    - reflexivity.
+    - reflexivity.
+  + inversion HeqC''.
+    reflexivity.
+  + inversion HeqC''.
+    reflexivity.
+  + admit.
+  + admit.
 
 Admitted.
 
@@ -2013,40 +1954,34 @@ Proof.
   intros.
   revert st1 st2; induction c; intros.
   + repeat split.
-    - 
-    apply CSkip_halt in H.
-    destruct H.
-    rewrite H0.
-    tauto.
-    -
-(*     exists CBreak. intros. *)
-    destruct H.
-    destruct H.
-    apply CSkip_halt in H.
-    destruct H.
-    exact H1.
-    -
-    destruct H.
-    destruct H.
-    apply CSkip_halt in H.
-    destruct H.
-    rewrite H in H0.
-    inversion H0.
-    - 
-    destruct H.
-    destruct H.
-    apply CSkip_halt in H.
-    destruct H.
-    exact H1.
-    - 
-    destruct H.
-    destruct H.
-    apply CSkip_halt in H.
-    destruct H.
-    rewrite H in H0.
-    inversion H0.
- +  split.
-      intros.
+    - apply CSkip_halt in H.
+      destruct H.
+      rewrite H0.
+      tauto.
+    - destruct H.
+      destruct H.
+      apply CSkip_halt in H.
+      destruct H.
+      exact H1.
+    - destruct H.
+      destruct H.
+      apply CSkip_halt in H.
+      destruct H.
+      rewrite H in H0.
+      inversion H0.
+    - destruct H.
+      destruct H.
+      apply CSkip_halt in H.
+      destruct H.
+      exact H1.
+    - destruct H.
+      destruct H.
+      apply CSkip_halt in H.
+      destruct H.
+      rewrite H in H0.
+      inversion H0.
+  + split.
+    - intros.
       apply CAss_path_spec in H.
       destruct H.
       destruct H as [? [? ?]].
@@ -2054,49 +1989,44 @@ Proof.
       unfold asgn_sem.
       rewrite H0.
       split.
-      apply semantic_equiv_aexp2 in H.
-      omega.
-      split.
-      tauto.
-      intros.
-      pose proof H1 _ H2.
-      tauto.
-      
-      split.
-      intros.
-      destruct H.
-      destruct H.
-      inversion H.
-      
-      
-      
+      * apply semantic_equiv_aexp2 in H.
+        omega.
+      * split.
+        { tauto. }
+        { intros.
+          pose proof H1 _ H2.
+          tauto.
+        }
+    - split.
+      * intros.
+        destruct H.
+        destruct H.
+        inversion H; admit.
 (*       revert H H0; induction x; intros.
       - inversion H0.
       - inversion H0.
       - apply IHx1.
-         
           admit.
           inversion H0.
           exact H2.
       - inversion H0.
       - inversion H0.
       -  *)
-      admit. admit. admit. admit.
+      * admit.
       (* 
       inversion H0.
       simpl.
       unfold asgn_sem.
       split.
-      
       exists CSkip.
       intros.
       destruct H.
       apply CAss_path_spec in H.
       inversion H0. *)
  + split.
-     intros.
-     apply CSeq_path_spec in H.
-     destruct H as [st1' [? ?]].
+  - intros.
+    apply CSeq_path_spec in H.
+    destruct H as [st1' [? ?]].
     apply IHc1 in H.
     apply IHc2 in H0.
     simpl.
@@ -2104,48 +2034,48 @@ Proof.
     left.
     exists st1'.
     tauto.
-    split.
-    intros.
-    destruct H.
-    simpl.
-    unfold seq_sem.
-    right.
-    split.
-    destruct H.
-    admit.
-    -
-    destruct H.
-    inversion H0; unfold not; intros . discriminate H2. discriminate H3. 
-     - intros.
+  - split.
+    * intros.
+      destruct H.
+      simpl.
+      unfold seq_sem.
+      right.
+      split.
+      {
         destruct H.
+        admit.
+      }
+      {
         destruct H.
-        inversion H0.
-        admit.
-        admit.
-  + 
-  pose proof semantic_equiv_bexp2 st1 b.
-         destruct H.
-  split.
-      intros.
+        inversion H0; unfold not; intros . discriminate H2. discriminate H3. 
+      }
+     * intros.
+       destruct H.
+       destruct H.
+       inversion H0; admit.
+  + pose proof semantic_equiv_bexp2 st1 b.
+    destruct H.
+    split.
+    - intros.
       apply CIf_path_spec in H1.
-        
       destruct H1.
-      - simpl.
-         unfold if_sem.
-         left.
-         destruct H1.
-         apply H0 in H.
-         firstorder.
-         apply H in H1.
-         admit.
-         admit.
-      - firstorder.
-      - split.
-         intros.
-         admit.
-         admit.
- +
- admit.
+      * simpl.
+        unfold if_sem.
+        left.
+        destruct H1.
+        apply H0 in H.
+        { firstorder. }
+        {
+          apply H in H1.
+          admit.
+        }
+        { admit. }
+      * firstorder.
+    - split.
+      * intros.
+        admit.
+      * admit.
+ + admit.
   (* repeat split. intros.
   apply CIf_path_spec in H.
   destruct H as [[? ?] | [? ?]].
@@ -2159,7 +2089,6 @@ Proof.
     destruct H1.
     pose proof H1 H.
     exact H3.
-    
     - right.
     split.
     apply IHc2 in H0.
@@ -2168,7 +2097,6 @@ Proof.
     destruct H1.
     pose proof H2 H.
     exact H3.
-    
     -
     exists CSkip.
     intros.
@@ -2178,8 +2106,7 @@ Proof.
     intros.
     destruct H.
     inversion H0.*)
-  + 
-  admit.
+  + admit.
   (* repeat split.
       intros.
       apply CWhile_path_spec in H.
@@ -2218,7 +2145,6 @@ Proof.
   apply CBreak_halt in H.
   destruct H.
   inversion H.
-  
   split.
   exists CBreak.
   intros.
@@ -2227,7 +2153,6 @@ Proof.
   simpl.
   unfold break_sem.
   tauto.
-  
   exists CBreak.
   intros.
   destruct H.
@@ -2240,7 +2165,6 @@ Proof.
   apply CCont_halt in H.
   destruct H.
   inversion H.
-  
   split.
   exists CBreak.
   intros.
@@ -2248,7 +2172,6 @@ Proof.
   apply CCont_halt in H.
   destruct H.
   inversion H.
-  
   exists CCont.
   intros.
   destruct H.
@@ -2257,7 +2180,6 @@ Proof.
   simpl.
   unfold cont_sem.
   tauto. *)
-
  + admit.
 Admitted.
 
