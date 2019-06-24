@@ -1209,13 +1209,9 @@ Proof.
     - admit.
     - admit.
     - inversion H1.
-    - inversion H1.
-    - inversion H1.
   + inversion H; subst.
     - reflexivity.
     - admit.
-    - reflexivity.
-    - reflexivity.
     - reflexivity.
     - reflexivity.
   + inversion HeqC''.
@@ -1648,18 +1644,16 @@ Proof.
       exists (st2 X).
       pose proof multi_astep_refl st1 (ANum (st2 X)).
       tauto.
-    - inversion H; subst ;inversion H2.
     - inversion H; subst; inversion H2.
-    - admit.
-    - inversion H2.
-    - admit.
+    - inversion H; subst; inversion H2.
     - inversion H2.
     - inversion H2.
     - inversion H2.
     - inversion H2.
     - inversion H2.
     - inversion H2.
-Admitted.
+    - inversion H2.
+Qed.
 
 Lemma CSeq_path_spec: forall c1 st1 c2 st3 s,
   multi_cstep (CNormal s (CSeq c1 c2), st1) (CNormal s CSkip, st3) ->
@@ -1685,6 +1679,19 @@ Proof.
       exists st0.
       pose proof multi_cstep_refl st0 (CNormal s Skip).
       tauto.
+    - clear IH.
+      inversion H2; subst.
+      pose proof multi_cstep_trans_1n H H0.
+      
+      admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
 Admitted.
 
 Lemma CIf_path_spec: forall b c1 c2 st1 st2 s,
@@ -1711,16 +1718,14 @@ Proof.
       tauto.
     - inversion H2.
     - inversion H2.
-    - admit.
-    - inversion H2.
-    - admit.
     - inversion H2.
     - inversion H2.
     - inversion H2.
     - inversion H2.
     - inversion H2.
     - inversion H2.
-Admitted.
+    - inversion H2.
+Qed.
 
 Fixpoint CWhile_path s b c1 st1 st2 (n: nat): Prop:=
   match n with

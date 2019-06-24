@@ -254,10 +254,11 @@ Inductive cstep : (com' * state) -> (com' * state) -> Prop :=
       cstep
         (CNormal s c, st)
         (CNormal (cons (Dowhileloop c1 b c2) s) c1, st)
-  | CS_DoWhileStep1 : forall st1 st2 s b c1 c2 c1' c1'',
+(*   | CS_DoWhileStep1 : forall st1 st2 s b c1 c2 c1' c1'',
       cstep
         (CNormal (cons (Dowhileloop c1 b c2) s) c1', st1)
-        (CNormal (cons (Dowhileloop c1 b c2) s) c1'', st2)
+        (CNormal (cons (Dowhileloop c1 b c2) s) c1'', st2) *)
+(* 经过反复思考，我们发现这一项是没有必要的，甚至是错误的，因为这一项本质实际上就是cstep 执行的过程*)
   | CS_DoWhileStep2 : forall st s b b' b'' c1 c2,
       bstep st b' b'' ->
       cstep
@@ -287,10 +288,11 @@ Inductive cstep : (com' * state) -> (com' * state) -> Prop :=
       cstep
         (CLoopCond (cons (Forloop c1 b c3 c2 c4) s) b', st)
         (CLoopCond (cons (Forloop c1 b c3 c2 c4) s) b'', st)
-  | CS_ForStep3 : forall st s b c1 c2 c3 c4 c' c'',
+(*   | CS_ForStep3 : forall st s b c1 c2 c3 c4 c' c'',
       cstep
         (CNormal (cons (Forloop c1 b c3 c2 c4) s) c', st)
-        (CNormal (cons (Forloop c1 b c3 c2 c4) s) c'', st)
+        (CNormal (cons (Forloop c1 b c3 c2 c4) s) c'', st) *)
+(* 经过反复思考，我们发现这一项是没有必要的，甚至是错误的，因为这一项本质实际上就是cstep 执行的过程*)
   | CS_ForStep4 : forall st s b c1 c2 c3 c4 c' c'',
       cstep
         (CIncrement (cons (Forloop c1 b c3 c2 c4) s) c', st)
