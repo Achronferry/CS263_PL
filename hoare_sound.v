@@ -572,12 +572,12 @@ Proof.
    discriminate H3.
 Qed.
 
-Lemma Assertion_sub_spec_lemma1: forall st La (P: Assertion) (E: aexp'),
+Lemma Assertion_sub_spec_lemma1: forall st La (P: Assertion) (E: aexp),
   (st, La) |== rename_all E P <-> (st, La) |== P.
 Proof.
 Admitted.
 
-Lemma Assertion_sub_spec_lemma2: forall st1 st2 La (P: Assertion) (X: var) (E: aexp'),
+Lemma Assertion_sub_spec_lemma2: forall st1 st2 La (P: Assertion) (X: var) (E: aexp),
   st2 X = aexp'_denote (st1, La) E ->
   (forall Y : var, X <> Y -> st1 Y = st2 Y) ->
   (st1, La) |== naive_sub X E (rename_all E P) <-> (st2, La) |== rename_all E P.
