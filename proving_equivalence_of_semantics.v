@@ -586,19 +586,15 @@ Theorem multi_congr_CSeq: forall st1 s c1 st1' c1' c2,
   multi_cstep (CNormal s (CSeq c1 c2), st1)
         (CNormal s (CSeq c1' c2), st1').
 Proof.
-  intros.
+(*   intros.
   remember (CNormal s c1) as c eqn:H0; remember (CNormal s c1') as c0 eqn:H1.
   revert s c1 c1' H0 H1; induction_n1 H; intros; subst.
   + inversion H1;subst.
     unfold multi_cstep.
     apply rt_refl.
   + assert (CNormal s c3 = CNormal s c3) by reflexivity.
-    (* apply multi_cstep_trans_n1.
-    - 
-    - apply CS_SeqStep.
-      exact H0.
  *)
-
+ 
 (*   intros.
   remember (CNormal s c1, st1) as x; remember (CNormal s c1', st1') as y.
   revert s c1 c2 c1' st1 st1' Heqx Heqy.
@@ -837,10 +833,8 @@ Proof.
     pose proof multi_cstep_trans_n1 H4 H5.
     exact H6.
   + simpl in H0.
-    destruct H0.
-    destruct H0.
-    - destruct H0 as [st3 [? ?]].
-      specialize (IHn st3 st2 H2).
+    destruct H0 as [[[st3 [? ?]] | ?] ?].
+    - specialize (IHn st3 st2 H1).
       pose proof CS_While.
 Admitted.
 (*   intros.
@@ -1230,7 +1224,6 @@ Proof.
     reflexivity.
   + admit.
   + admit.
-
 Admitted.
 
 
@@ -1655,6 +1648,17 @@ Proof.
       exists (st2 X).
       pose proof multi_astep_refl st1 (ANum (st2 X)).
       tauto.
+    - inversion H; subst ;inversion H2.
+    - inversion H; subst; inversion H2.
+    - admit.
+    - inversion H2.
+    - admit.
+    - inversion H2.
+    - inversion H2.
+    - inversion H2.
+    - inversion H2.
+    - inversion H2.
+    - inversion H2.
 Admitted.
 
 Lemma CSeq_path_spec: forall c1 st1 c2 st3 s,
@@ -1705,6 +1709,17 @@ Proof.
       tauto.
     - pose proof multi_bstep_refl st0 BFalse.
       tauto.
+    - inversion H2.
+    - inversion H2.
+    - admit.
+    - inversion H2.
+    - admit.
+    - inversion H2.
+    - inversion H2.
+    - inversion H2.
+    - inversion H2.
+    - inversion H2.
+    - inversion H2.
 Admitted.
 
 Fixpoint CWhile_path s b c1 st1 st2 (n: nat): Prop:=
