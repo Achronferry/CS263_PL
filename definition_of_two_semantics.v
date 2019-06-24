@@ -186,18 +186,42 @@ Inductive com': Type :=
 | CInit (s: cstack) (c: com):com'
 | CIncrement (s: cstack) (c: com):com'.
 
+(* 老师，我们修改了此处定义，因为之前的定义实质上是有错误的，会产生循环，嵌套定义，甚至无效定义，原定义我们已用注释形式表示
+ *)
 Inductive cstep : (com' * state) -> (com' * state) -> Prop :=
   | CS_AssStep : forall st s X a a',
       astep st a a' ->
       cstep
         (CNormal s (CAss X a), st)
         (CNormal s (CAss X a'), st)
+  | CS_AssStep1 : forall st s X a a',
+      astep st a a' ->
+      cstep
+        (CInit s (CAss X a), st)
+        (CInit s (CAss X a'), st)
+  | CS_AssStep2 : forall st s X a a',
+      astep st a a' ->
+      cstep
+        (CIncrement s (CAss X a), st)
+        (CIncrement s (CAss X a'), st)
   | CS_Ass : forall st1 st2 s X n,
       st2 X = n ->
       (forall Y, X <> Y -> st1 Y = st2 Y) ->
       cstep
         (CNormal s (CAss X (ANum n)), st1)
         (CNormal s CSkip, st2)
+  | CS_Ass1 : forall st1 st2 s X n,
+      st2 X = n ->
+      (forall Y, X <> Y -> st1 Y = st2 Y) ->
+      cstep
+        (CInit s (CAss X (ANum n)), st1)
+        (CInit s CSkip, st2)
+  | CS_Ass2 : forall st1 st2 s X n,
+      st2 X = n ->
+      (forall Y, X <> Y -> st1 Y = st2 Y) ->
+      cstep
+        (CIncrement s (CAss X (ANum n)), st1)
+        (CIncrement s CSkip, st2)
 
 
   | CS_SeqStep : forall st s c1 c1' st' c2,
@@ -207,10 +231,32 @@ Inductive cstep : (com' * state) -> (com' * state) -> Prop :=
       cstep
         (CNormal s (CSeq c1 c2), st)
         (CNormal s (CSeq c1' c2), st')
+  | CS_SeqStep1 : forall st s c1 c1' st' c2,
+      cstep
+        (CInit s c1, st)
+        (CInit s c1', st') ->
+      cstep
+        (CInit s (CSeq c1 c2), st)
+        (CInit s (CSeq c1' c2), st')
+  | CS_SeqStep2 : forall st s c1 c1' st' c2,
+      cstep
+        (CIncrement s c1, st)
+        (CIncrement s c1', st') ->
+      cstep
+        (CIncrement s (CSeq c1 c2), st)
+        (CIncrement s (CSeq c1' c2), st')
   | CS_Seq : forall st s c2,
       cstep
         (CNormal s (CSeq CSkip c2), st)
         (CNormal s c2, st)
+  | CS_Seq1 : forall st s c2,
+      cstep
+        (CInit s (CSeq CSkip c2), st)
+        (CInit s c2, st)
+  | CS_Seq2 : forall st s c2,
+      cstep
+        (CIncrement s (CSeq CSkip c2), st)
+        (CIncrement s c2, st)
 
 
   | CS_IfStep : forall st s b b' c1 c2,
@@ -218,14 +264,40 @@ Inductive cstep : (com' * state) -> (com' * state) -> Prop :=
       cstep
         (CNormal s (CIf b c1 c2), st)
         (CNormal s (CIf b' c1 c2), st)
+  | CS_IfStep1 : forall st s b b' c1 c2,
+      bstep st b b' ->
+      cstep
+        (CInit s (CIf b c1 c2), st)
+        (CInit s (CIf b' c1 c2), st)
+  | CS_IfStep2 : forall st s b b' c1 c2,
+      bstep st b b' ->
+      cstep
+        (CIncrement s (CIf b c1 c2), st)
+        (CIncrement s (CIf b' c1 c2), st)
   | CS_IfTrue : forall st s c1 c2,
       cstep
         (CNormal s (CIf BTrue c1 c2), st)
         (CNormal s c1, st)
+  | CS_IfTrue1 : forall st s c1 c2,
+      cstep
+        (CInit s (CIf BTrue c1 c2), st)
+        (CInit s c1, st)
+  | CS_IfTrue2 : forall st s c1 c2,
+      cstep
+        (CIncrement s (CIf BTrue c1 c2), st)
+        (CIncrement s c1, st)
   | CS_IfFalse : forall st s c1 c2,
       cstep
         (CNormal s (CIf BFalse c1 c2), st)
         (CNormal s c2, st)
+  | CS_IfFalse1 : forall st s c1 c2,
+      cstep
+        (CInit s (CIf BFalse c1 c2), st)
+        (CInit s c2, st)
+  | CS_IfFalse2 : forall st s c1 c2,
+      cstep
+        (CIncrement s (CIf BFalse c1 c2), st)
+        (CIncrement s c2, st)
 
 
   | CS_While : forall st s c b c1 c2,
@@ -279,10 +351,10 @@ Inductive cstep : (com' * state) -> (com' * state) -> Prop :=
       cstep
         (CNormal s c, st)
         (CInit (cons (Forloop c1 b c3 c2 c4) s) c1, st)
-  | CS_ForStep1 : forall st1 st2 s b c1 c2 c3 c4 c1' c1'',
+(*   | CS_ForStep1 : forall st1 st2 s b c1 c2 c3 c4 c1' c1'',
       cstep
         (CInit (cons (Forloop c1 b c3 c2 c4) s) c1', st1)
-        (CInit (cons (Forloop c1 b c3 c2 c4) s) c1'', st2)
+        (CInit (cons (Forloop c1 b c3 c2 c4) s) c1'', st2) *)
   | CS_ForStep2 : forall st s b b' b'' c1 c2 c3 c4,
       bstep st b' b'' ->
       cstep
@@ -292,11 +364,10 @@ Inductive cstep : (com' * state) -> (com' * state) -> Prop :=
       cstep
         (CNormal (cons (Forloop c1 b c3 c2 c4) s) c', st)
         (CNormal (cons (Forloop c1 b c3 c2 c4) s) c'', st) *)
-(* 经过反复思考，我们发现这一项是没有必要的，甚至是错误的，因为这一项本质实际上就是cstep 执行的过程*)
-  | CS_ForStep4 : forall st s b c1 c2 c3 c4 c' c'',
+(*   | CS_ForStep4 : forall st s b c1 c2 c3 c4 c' c'',
       cstep
         (CIncrement (cons (Forloop c1 b c3 c2 c4) s) c', st)
-        (CIncrement (cons (Forloop c1 b c3 c2 c4) s) c'', st)
+        (CIncrement (cons (Forloop c1 b c3 c2 c4) s) c'', st) *)
   | CS_ForTrue : forall st s b c1 c2 c3 c4,
       cstep
         (CLoopCond (cons (Forloop c1 b c3 c2 c4) s) BTrue, st)
