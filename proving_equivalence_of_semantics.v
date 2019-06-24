@@ -1218,6 +1218,17 @@ Proof.
     - inversion H1.
     - inversion H1.
     - inversion H1.
+    (*
+    - remember ( (Dowhileloop c1 b c2 :: s0)%list) as L.
+      revert HeqL.
+      inversion H; intros; subst.
+      * inversion H1.
+      * 
+      * inversion HeqL.
+      * inversion HeqL.
+      * inversion H1.
+      * inversion HeqL.
+    - admit.
     - inversion H1.
   + inversion H; subst.
     - reflexivity.
@@ -1230,7 +1241,9 @@ Proof.
     reflexivity.
   + admit.
   + admit.
+  *)
 Admitted.
+
 
 
 Lemma APlus_path_spec: forall st a1 a2 n,
