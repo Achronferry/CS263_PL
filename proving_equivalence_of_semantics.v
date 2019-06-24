@@ -645,6 +645,21 @@ Proof.
       exact H0.
 Qed.
 
+Theorem multi_congr_CForloop: forall st s b b' c1 c2 c3 c4,
+  multi_bstep st b b' ->
+  multi_cstep
+     (CLoopCond (Forloop c1 b c3 c2 c4 :: s)%list b, st)
+        (CLoopCond (Forloop c1 b c3 c2 c4 :: s)%list b', st).
+Proof.
+  intros.
+  induction_n1 H.
+  + apply multi_cstep_refl.
+  + eapply multi_cstep_trans_n1.
+    - exact IH.
+    - apply CS_ForStep2.
+      exact H0.
+Qed.
+
 (* ################################################################# *)
 (** * From Denotations To Multi-step Relations *)
 
@@ -881,19 +896,21 @@ Proof.
   revert st1 st2 H; induction n; intros.
   + simpl in H.
     firstorder; subst.
-    - pose proof CS_While.
-      pose proof semantic_equiv_bexp1 st2 b.
+    - pose proof semantic_equiv_bexp1 st2 b.
       firstorder.
-      pose proof multi_congr_CDoWhileLoop st2 s b BFalse c Skip H4.
+      pose proof multi_congr_CDoWhileLoop st2 s b BFalse c Skip H3.
       pose proof CS_DoWhileFalse st2 s b c Skip.
-      pose proof multi_cstep_trans_n1 H5 H6.
+      pose proof multi_cstep_trans_n1 H4 H5.
+      clear H3 H4 H5 H2.
+      pose proof CS_DoWhileSkip st2 s b c CSkip.
+      specialize (H0 st1 st2 H).
 Admitted.
 
 
 (* *)
 Lemma semantic_equiv_iter_loop3: forall st1 st2 st3 c1 c2 c3 s  b n,(* 前提不是都要用*)
 ceval c1 st1 EK_Normal st3 ->
-  iter_loop_body3 b (ceval c3) (ceval c2) n st1 st2 ->
+  iter_loop_body3 b (ceval c3) (ceval c2) n st3 st2 ->
 (forall st4 st5 : state,
        ceval c1 st4 EK_Normal st5 -> multi_cstep (CNormal s c1, st4) (CNormal s Skip, st5)) ->
 (forall st4 st5 : state,
@@ -902,6 +919,18 @@ ceval c1 st1 EK_Normal st3 ->
        ceval c3 st4 EK_Normal st5 -> multi_cstep (CNormal s c3, st4) (CNormal s Skip, st5))->
 multi_cstep  (CInit (Forloop c1 b c3 c2 Skip :: s)%list c1, st1)  (CNormal s Skip, st2).
 Proof.
+  intros.
+  revert st1 st2 st3 H0 H; induction n; intros.
+  + simpl in H0.
+    pose proof semantic_equiv_bexp1 st3 b.
+    firstorder.
+    pose proof multi_congr_CForloop st3 s b BFalse c1 c3 c2 CSkip H5.
+    pose proof CS_ForFalse st3 s b c1 c3 c2 CSkip.
+    pose proof multi_cstep_trans_n1 H7 H8.
+    clear H8 H7 H5 H6.
+    pose proof CS_ForSkip1 st3 s c1 b c3 c2 CSkip.
+    pose proof multi_cstep_trans_1n H5 H9.
+    clear H9 H5.
 Admitted.
 
 
@@ -1206,18 +1235,10 @@ Proof.
     - inversion H1.
     - inversion H1.
     - inversion H1.
-    (*
     - remember ( (Dowhileloop c1 b c2 :: s0)%list) as L.
       revert HeqL.
       inversion H; intros; subst.
-      * inversion H1.
-      * 
-      * inversion HeqL.
-      * inversion HeqL.
-      * inversion H1.
-      * inversion HeqL.
-    - admit.
-    - inversion H1.
+      inversion H1.
   + inversion H; subst.
     - reflexivity.
     - inversion H1.
@@ -1229,10 +1250,7 @@ Proof.
     reflexivity.
   + admit.
   + admit.
-  *)
 Admitted.
-
-
 
 Lemma APlus_path_spec: forall st a1 a2 n,
   multi_astep st (APlus a1 a2) (ANum n) ->
