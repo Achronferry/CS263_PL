@@ -905,7 +905,7 @@ Admitted.
 (* *)
 Lemma semantic_equiv_iter_loop3: forall st1 st2 st3 c1 c2 c3 s  b n,(* 前提不是都要用*)
 ceval c1 st1 EK_Normal st3 ->
-  iter_loop_body3 b (ceval c3) (ceval c2) n st1 st2 ->
+  iter_loop_body3 b (ceval c3) (ceval c2) n st3 st2 ->
 (forall st4 st5 : state,
        ceval c1 st4 EK_Normal st5 -> multi_cstep (CNormal s c1, st4) (CNormal s Skip, st5)) ->
 (forall st4 st5 : state,
