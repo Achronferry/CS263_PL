@@ -60,23 +60,58 @@ Definition FOL_sound (T: FirstOrderLogic): Prop :=
 (** Now, we will start our Hoare logic soundness proof. *)
 
 Lemma hoare_seq_sound : forall (P Q R QB QC RB RC: Assertion) (c1 c2: com),
-  |== {{P}} c1 {{ Q }} {{ QB }} {{ QC }} ->
+  |== {{P}} c1 {{ Q }} {{ RB }} {{ RC }} ->
   |== {{Q}} c2 {{R}} {{RB}} {{RC}}->
   |== {{P}} c1;;c2 {{R}} {{RB}} {{RC}}.
 Proof.
   unfold valid.
   intros.
-  simpl in H2.
-  unfold seq_sem in H2.
-  destruct H2.
+  repeat split; intros;
+  simpl in H2; destruct H2.
+
+  (* EK_Normal *)
   + destruct H2 as [st1' [? ?]].
-    specialize (H _ _ _ H1 H2).
-    specialize (H0 _ _ _ H H3).
-    exact H0.
+    specialize (H _ _ st1' H1).
+    destruct H as [? [? ?]].
+    clear H1 H4 H5.
+    pose proof H H2.
+    specialize (H0 _ _ st2 H1).
+    destruct H0 as [? [? ?]].
+    clear H1 H4 H5.
+    pose proof H0 H3.
+    tauto.
   + destruct H2.
-    unfold not in H3.
-    destruct H3.
-    reflexivity.
+    tauto.
+
+  (* EK_Break *)
+  + destruct H2 as [st1' [? ?]].
+    specialize (H _ _ st1' H1).
+    destruct H as [? [? ?]].
+    clear H1 H4 H5.
+    pose proof H H2.
+    specialize (H0 _ _ st2 H1).
+    destruct H0 as [? [? ?]].
+    clear H1 H0 H5.
+    pose proof H4 H3.
+    tauto.
+  + destruct H2.
+    specialize (H _ _ st2 H1).
+    tauto.
+
+  (* EK_Cont *)
+  + destruct H2 as [st1' [? ?]].
+    specialize (H _ _ st1' H1).
+    destruct H as [? [? ?]].
+    clear H1 H4 H5.
+    pose proof H H2.
+    specialize (H0 _ _ st2 H1).
+    destruct H0 as [? [? ?]].
+    clear H1 H0 H4.
+    pose proof H5 H3.
+    tauto.
+  + destruct H2.
+    specialize (H _ _ st2 H1).
+    tauto.
 Qed.
 
 Lemma hoare_skip_sound : forall P,
@@ -84,38 +119,59 @@ Lemma hoare_skip_sound : forall P,
 Proof.
   unfold valid.
   intros.
-  simpl in H0.
-  unfold skip_sem in H0.
-  destruct H0.
-  rewrite <- H0.
-  exact H.
+  repeat split;intros;
+  simpl in H0; destruct H0.
+
+  (* EK_Normal *)
+  + rewrite <- H0.
+    tauto.
+
+  (* EK_Break *)
+  + discriminate H1.
+
+  (* EK_Cont *)
+  + discriminate H1.
 Qed.
 
 Lemma hoare_break_sound : forall P,
-  |== {{P}} Skip {{{[BFalse]}}}{{P}}{{{[BFalse]}}}.
+  |== {{P}} Break {{{[BFalse]}}}{{P}}{{{[BFalse]}}}.
 Proof.
-Admitted.
-(*unfold valid.
+  unfold valid.
   intros.
-  simpl in H0.
-  unfold skip_sem in H0.
-  destruct H0.
-  rewrite <- H0.
-  exact H.
-Qed. *)
+  repeat split; intros;
+  simpl in H0; destruct H0.
+
+  (* EK_Normal *)
+  + discriminate H1.
+
+  (* EK_Break *)
+  + rewrite <- H0.
+    tauto.
+
+  (* EK_Cont *)
+  + destruct H0.
+    discriminate H1.
+Qed.
 
 Lemma hoare_continue_sound : forall P,
-  |== {{P}} Skip {{{[BFalse]}}}{{{[BFalse]}}}{{P}}.
+  |== {{P}} Continue {{{[BFalse]}}}{{{[BFalse]}}}{{P}}.
 Proof.
-Admitted.
-(*unfold valid.
+  unfold valid.
   intros.
-  simpl in H0.
-  unfold skip_sem in H0.
-  destruct H0.
-  rewrite <- H0.
-  exact H.
-Qed. *)
+  repeat split;intros;
+  simpl in H0; destruct H0.
+
+  (* EK_Normal *)
+  + discriminate H1.
+
+  (* EK_Break *)
+  + discriminate H1.
+
+  (* EK_Cont *)
+  + rewrite <- H0.
+    tauto.
+Qed.
+
 
 Lemma hoare_if_sound : forall P Q QB QC(b: bexp) c1 c2,
   |== {{ P AND {[b]} }} c1 {{ Q }} {{ QB }} {{ QC }} ->
@@ -124,19 +180,44 @@ Lemma hoare_if_sound : forall P Q QB QC(b: bexp) c1 c2,
 Proof.
   unfold valid.
   intros.
-  simpl in H2.
-  unfold if_sem in H2.
-  repeat destruct H2.
+  repeat split; intros;
+  simpl in H2; repeat destruct H2.
+
+  (* EK_Normal *)
   + apply H with st1.
     - simpl.
       pose proof beval_bexp'_denote st1 La b.
       tauto.
-    - exact H2.
+    - tauto.
   + apply H0 with st1.
     - simpl.
       pose proof beval_bexp'_denote st1 La b.
       tauto.
-    - exact H2.
+    - tauto.
+
+  (* EK_Break *)
+  + apply H with st1.
+    - simpl.
+      pose proof beval_bexp'_denote st1 La b.
+      tauto.
+    - tauto.
+  + apply H0 with st1.
+    - simpl.
+      pose proof beval_bexp'_denote st1 La b.
+      tauto.
+    - tauto.
+
+  (* EK_Cont *)
+  + apply H with st1.
+    - simpl.
+      pose proof beval_bexp'_denote st1 La b.
+      tauto.
+    - tauto.
+  + apply H0 with st1.
+    - simpl.
+      pose proof beval_bexp'_denote st1 La b.
+      tauto.
+    - tauto.
 Qed.
 
 Lemma hoare_while_sound : forall I P(b: bexp) c,
@@ -145,64 +226,59 @@ Lemma hoare_while_sound : forall I P(b: bexp) c,
 Proof.
   unfold valid.
   intros.
-  simpl in H1.
-  unfold loop_sem1 in H1.
-  destruct H1 as [n ?].
-  revert st1 H0 H1; induction n; intros.
-  + simpl in H1.
-    repeat destruct H1.
-    simpl.
-    right.
-    pose proof beval_bexp'_denote st1 La b.
-    rewrite <- H1.
-    tauto.
-  + simpl in H1.
-    repeat destruct H1.
+  repeat split; intros;
+  simpl in H1; destruct H1 as [n ?].
+  
+  (* EK_Normal *)
+  + revert st1 H0 H1; induction n; intros;
+    simpl in H1; repeat destruct H1.
+    - simpl.
+      right.
+      pose proof beval_bexp'_denote st1 La b.
+      tauto.
     - apply IHn with x.
-      * assert ((st1, La) |== I AND {[b]}).
-        {
-          simpl.
-          pose proof beval_bexp'_denote st1 La b.
-          tauto.
-        }
-        specialize (H _ _ _ H5 H1).
-        exact H.
-      * split; [exact H4|exact H2].
-    - simpl in H1.
-      
-      
-
-Admitted.
-(*   unfold valid.
-  intros.
-  simpl in H1.
-  unfold loop_sem in H1.
-  unfold Relation_Operators.omega_union in H1.
-  destruct H1 as [n ?].
-  revert st1 H0 H1; induction n; intros.
-  + simpl in H1.
-    unfold Relation_Operators.intersection,
-           Relation_Operators.id,
-           Relation_Operators.filter1 in H1.
-    destruct H1.
-    subst st2.
-    simpl.
-    pose proof beval_bexp'_denote st1 La b.
-    tauto.
-  + simpl in H1.
-    unfold Relation_Operators.intersection,
-           Relation_Operators.concat,
-           Relation_Operators.filter1 in H1.
-    destruct H1 as [[st1' [? ?]] ?].
-    apply IHn with st1'.
-    - apply H with st1.
+      assert ((st1, La) |== I AND {[b]}).
       * simpl.
         pose proof beval_bexp'_denote st1 La b.
         tauto.
-      * exact H1.
-    - exact H2.
+      * specialize (H _ _ x H5).
+        destruct H.
+        pose proof H H1.
+        tauto.
+      * split.
+        tauto.
+        tauto.
+    - assert ((st1, La) |== I AND {[b]}).
+      * simpl.
+        pose proof beval_bexp'_denote st1 La b.
+        tauto.
+      * specialize (H _ _ st2 H4).
+        destruct H as [? [? ?]].
+        pose proof H5 H1.
+        simpl.
+        left.
+        tauto.
+    - assert ((st1, La) |== I AND {[b]}).
+      * simpl.
+        pose proof beval_bexp'_denote st1 La b.
+        tauto.
+      * specialize (H _ _ x H5).
+        destruct H as [? [? ?]].
+        pose proof H7 H1.
+        apply IHn with x.
+        tauto.
+        split.
+        tauto.
+        tauto.
+
+  (* EK_Break *)
+  + destruct H1.
+    discriminate H2.
+
+  (* EK_Cont *)
+  + destruct H1.
+    discriminate H2.
 Qed.
- *)
 
 Lemma hoare_for_sound : forall U I IT P c1 (b:bexp) c2 c3,
   |== {{U}} c1 {{I}}{{{[BFalse]}}}{{{[BFalse]}}} ->
@@ -212,7 +288,83 @@ Lemma hoare_for_sound : forall U I IT P c1 (b:bexp) c2 c3,
 Proof.
   unfold valid.
   intros.
-Admitted.
+  repeat split;intros.
+
+  (* EK_Normal *)
+  + simpl in H3; destruct H3.
+    destruct H3 as [st1'[? ?]].
+    specialize (H _ _ st1' H2).
+    destruct H.
+    clear H2 H5.
+    pose proof H H3.
+    clear st1 H H3.
+    destruct H4 as [n ?].
+    revert st1' H2 H; induction n; intros;
+    simpl in H; repeat destruct H.
+    - simpl.
+      right.
+      pose proof beval_bexp'_denote st1' La b.
+      tauto.
+    - apply IHn with x0.
+      assert ((st1', La) |== I AND {[b]}).
+      * simpl.
+        pose proof beval_bexp'_denote st1' La b.
+        tauto.
+      * specialize (H0 _ _ x H6).
+        destruct H0.
+        clear H6 H7.
+        pose proof H0 H.
+        clear H0 H.
+        specialize (H1 _ _ x0 H6).
+        destruct H1.
+        clear H0 H6.
+        tauto.
+      * tauto.
+    - assert ((st1', La) |== I AND {[b]}).
+      * simpl.
+        pose proof beval_bexp'_denote st1' La b.
+        tauto.
+      * specialize (H0 _ _ st2 H5).
+        destruct H0 as [? [? ?]].
+        pose proof H6 H.
+        simpl.
+        left.
+        tauto.
+    - assert ((st1', La) |== I AND {[b]}).
+      * simpl.
+        pose proof beval_bexp'_denote st1' La b.
+        tauto.
+      * specialize (H0 _ _ x H6).
+        destruct H0 as [? [? ?]].
+        pose proof H8 H.
+        specialize (H1 _ _ x0 H9).
+        destruct H1 as [? [? ?]].
+        destruct H5.
+        pose proof H1 H5.
+        apply IHn with x0.
+        tauto.
+        tauto.
+    - destruct H3.
+      tauto.
+
+  (* EK_Break *)
+  + simpl in H3; destruct H3.
+    - destruct H3 as [? [? [? [? ?]]]].
+      discriminate H5.
+    - destruct H3.
+      specialize (H _ _ st2 H2).
+      destruct H as [? [? ?]].
+      tauto.
+
+  (* EK_Cont *)
+  + simpl in H3; destruct H3.
+    - repeat destruct H3 as [? [? [? [? ?]]]].
+      discriminate H5.
+    - destruct H3.
+      specialize (H _ _ st2 H2).
+      destruct H as [? [? ?]].
+      tauto.
+Qed.
 
 Lemma hoare_dowhile_sound : forall U I P0 P1 (b:bexp) c,
   |== {{U}} c {{I}}{{P0}}{{I}} ->
@@ -221,39 +373,245 @@ Lemma hoare_dowhile_sound : forall U I P0 P1 (b:bexp) c,
 Proof.
   unfold valid.
   intros.
-Admitted.
+  repeat split; intros.
+
+  (* EK_Normal *)
+  + destruct H2 as [n ?].
+    destruct n.
+    - repeat destruct H2.
+      * specialize (H _ _ st2 H1).
+        destruct H as [? [? ?]].
+        pose proof H H2.
+        simpl.
+        right.
+        pose proof beval_bexp'_denote st2 La b.
+        tauto.
+      * specialize (H _ _ st2 H1).
+        destruct H as [? [? ?]].
+        pose proof H4 H2.
+        simpl.
+        left.
+        left.
+        tauto.
+      * specialize (H _ _ st2 H1).
+        destruct H as [? [? ?]].
+        pose proof H6 H2.
+        simpl.
+        right.
+        pose proof beval_bexp'_denote st2 La b.
+        tauto.
+    - repeat destruct H2.
+      * specialize (H _ _ x H1).
+        destruct H as [? [? ?]].
+        pose proof H H2.
+        destruct H4.
+        clear st1 H H1 H2 H3 H5 H6.
+        generalize dependent x.
+        induction n; intros.
+        {
+          assert ((x, La) |== I AND {[b]}).
+          {
+            simpl.
+            pose proof beval_bexp'_denote x La b.
+            tauto.
+          }
+          pose proof beval_bexp'_denote st2 La b.
+          simpl in H4; destruct H4.
+          + specialize (H0 _ _ st2 H).
+            destruct H0 as [? [? ?]].
+            clear H3 H4.
+            destruct H2.
+            pose proof H0 H2.
+            simpl.
+            right.
+            tauto.
+          + destruct H2.
+            - specialize (H0 _ _ st2 H).
+              destruct H0 as [? [? ?]].
+              clear H0 H4.
+              pose proof H3 H2.
+              simpl.
+              left.
+              right.
+              tauto.
+            - destruct H2.
+              specialize (H0 _ _ st2 H).
+              destruct H0 as [? [? ?]].
+              clear H0 H4.
+              pose proof H5 H2.
+              simpl.
+              right.
+              tauto.
+        }
+        {
+          assert ((x, La) |== I AND {[b]}).
+          {
+            simpl.
+            pose proof beval_bexp'_denote x La b.
+            tauto.
+          }
+          destruct H4.
+          + destruct H1 as [? [? [? ?]]].
+            pose proof H0 _ _ x0 H.
+            destruct H4 as [? [? ?]].
+            pose proof H4 H1.
+            apply IHn with x0.
+            tauto.
+            tauto.
+            tauto.
+          + destruct H1.
+            - pose proof H0 _ _ st2 H.
+              destruct H2 as [? [? ?]].
+              pose proof H3 H1.
+              simpl.
+              left.
+              right.
+              tauto.
+            - destruct H1 as [? [? [? ?]]].
+              pose proof H0 _ _ x0 H.
+              destruct H4 as [? [? ?]].
+              pose proof H6 H1.
+              apply IHn with x0.
+              tauto.
+              tauto.
+              tauto.
+         }
+      * pose proof H _ _ st2 H1.
+        destruct H4 as [? [? ?]].
+        pose proof H5 H2.
+        simpl.
+        left.
+        left.
+        tauto.
+      * pose proof H _ _ x H1.
+        destruct H5 as [? [? ?]].
+        pose proof H7 H2.
+        assert ((x, La) |== I AND {[b]}).
+        {
+          simpl.
+          pose proof beval_bexp'_denote x La b.
+          tauto.
+        }
+        clear st1 H H1 H2 H3 H5 H6 H7.
+        generalize dependent x.
+        induction n; intros.
+        {
+          destruct H4.
+          repeat destruct H.
+          + pose proof H0 _ _ st2 H9.
+            destruct H3 as [? [? ?]].
+            pose proof H3 H.
+            simpl.
+            right.
+            pose proof beval_bexp'_denote st2 La b.
+            tauto.
+          + pose proof H0 _ _ st2 H9.
+            destruct H2 as [? [? ?]].
+            pose proof H3 H.
+            simpl.
+            left.
+            right.
+            tauto.
+          + pose proof H0 _ _ st2 H9.
+            destruct H3 as [? [? ?]].
+            pose proof H5 H.
+            simpl.
+            right.
+            pose proof beval_bexp'_denote st2 La b.
+            tauto.
+        }
+        {
+          destruct H4.
+          destruct H.
+          + destruct H as [? [? [? ?]]].
+            pose proof H0 _ _ x0 H9.
+            destruct H4 as [? [? ?]].
+            pose proof H4 H.
+            assert ((x0, La) |== I AND {[b]}).
+            {
+              simpl.
+              pose proof beval_bexp'_denote x0 La b.
+              tauto.
+            }
+            apply IHn with x0.
+            tauto.
+            tauto.
+            tauto.
+          + destruct H.
+            - pose proof H0 _ _ st2 H9.
+              destruct H2 as [? [? ?]].
+              pose proof H3 H.
+              simpl.
+              left.
+              right.
+              tauto.
+            - destruct H as [? [? [? ?]]].
+              pose proof H0 _ _ x0 H9.
+              destruct H4 as [? [? ?]].
+              pose proof H6 H.
+              assert ((x0, La) |== I AND {[b]}).
+              {
+                simpl.
+                pose proof beval_bexp'_denote x0 La b.
+                tauto.
+              }
+              apply IHn with x0.
+              tauto.
+              tauto.
+              tauto.
+        }
+
+  (* EK_Break *)
+  + destruct H2.
+   destruct H2.
+   discriminate H3.
+
+  (* EK_Cont *)
+  + destruct H2.
+   destruct H2.
+   discriminate H3.
+Qed.
 
 Lemma Assertion_sub_spec: forall st1 st2 La (P: Assertion) (X: var) (E: aexp),
   st2 X = aexp'_denote (st1, La) E ->
-  (forall Y : var, X <> Y -> st1 Y = st2 Y) /\ EK_Normal = EK_Normal->
+  (forall Y : var, X <> Y -> st1 Y = st2 Y) ->
   ((st1, La) |== P[ X |-> E]) <-> ((st2, La) |== P).
 Proof.
   intros.
-  split;intros.
-  + rewrite <- aeval_aexp'_denote in H.
-    
-
-(* FILL IN HERE *) Admitted.
+  split; intros.
+  + rewrite <- aeval_aexp'_denote in H. admit.
+  + rewrite <- aeval_aexp'_denote in H. admit.
+  (* FILL IN HERE *) Admitted.
 
 Lemma hoare_asgn_bwd_sound : forall P (X: var) (E: aexp),
   |== {{ P [ X |-> E] }} X ::= E {{ P }}{{{[BFalse]}}}{{{[BFalse]}}}.
 Proof.
   unfold valid.
   intros.
-  simpl in H0.
-  unfold asgn_sem in H0.
-  destruct H0.
-  pose proof aeval_aexp'_denote st1 La E.
-  rewrite H2 in H0.
-  pose proof Assertion_sub_spec st1 st2 La P X E H0.
-  apply H3.
-  + split.
+  repeat split; intros.
+
+  (* EK_Normal *)
+  + simpl in H0.
+    destruct H0.
+    pose proof aeval_aexp'_denote st1 La E.
+    rewrite H2 in H0.
+    pose proof Assertion_sub_spec st1 st2 La P X E H0.
+    apply H3.
     - intros.
-      specialize (H1 Y H4).
       destruct H1.
-      exact H1.
-    - reflexivity.
-  + exact H.
+      specialize (H5 Y H4).
+      tauto.
+    - tauto.
+
+  (* EK_Break *)
+  + simpl in H0.
+    destruct H0 as [? [? ?]].
+    discriminate H1.
+
+  (* EK_Cont *)
+  + simpl in H0.
+    destruct H0 as [? [? ?]].
+    discriminate H1.
 Qed.
 
 Lemma hoare_consequence_sound : forall (T: FirstOrderLogic) (P P' Q Q' QB QB' QC QC': Assertion) c,
@@ -280,9 +638,36 @@ Proof.
     specialize (H0 (st1, La)).
     tauto.
   }
-  specialize (H1 _ _ _ H7 H6).
-  specialize (H2 (st2, La)).
-  tauto.
+  repeat split;intros.
+
+  (* EK_Normal *)
+  + specialize (H1 _ _ st2 H6).
+    destruct H1 as [? [? ?]].
+    pose proof H1 H7.
+    specialize (H2 (st2, La)).
+    tauto.
+
+  (* EK_Break *)
+  + specialize (H1 _ _ st2 H6).
+    destruct H1 as [? [? ?]].
+    pose proof H8 H7.
+    unfold derives in H3.
+    apply H in H3.
+    unfold FOL_valid in H3.
+    simpl in H3.
+    specialize (H3 (st2, La)).
+    tauto.
+
+  (* EK_Cont *)
+  + specialize (H1 _ _ st2 H6).
+    destruct H1 as [? [? ?]].
+    pose proof H9 H7.
+    unfold derives in H4.
+    apply H in H4.
+    unfold FOL_valid in H4.
+    simpl in H4.
+    specialize (H4 (st2, La)).
+    tauto.
 Qed.
 
 Theorem Hoare_logic_soundness: forall (T: FirstOrderLogic) (TS: FOL_sound T),
@@ -295,28 +680,33 @@ Proof.
   clear P c Q HeqTr.
   induction H.
   + eapply hoare_seq_sound.
+    - tauto.
+    - tauto.
     - exact IHprovable1.
     - exact IHprovable2.
-  + apply hoare_skip_sound.
-  + apply hoare_if_sound.
+  + eapply hoare_skip_sound.
+  + eapply hoare_if_sound.
     - exact IHprovable1.
     - exact IHprovable2.
-  + apply hoare_while_sound.
+  + eapply hoare_while_sound.
     exact IHprovable.
-  + apply hoare_for_sound with IT.
+  + eapply hoare_for_sound.
     - exact IHprovable1.
     - exact IHprovable2.
     - exact IHprovable3.
-  + apply hoare_dowhile_sound.
+  + eapply hoare_dowhile_sound.
     - exact IHprovable1.
     - exact IHprovable2.
-  + apply hoare_asgn_bwd_sound.
-  + pose proof hoare_consequence_sound T P P' Q Q' QB0 QB' QC0 QC' c TS H IHprovable H1 H2 H3.
-    exact H4.
-  + apply hoare_continue_sound.
-  + apply hoare_break_sound.
+  + eapply hoare_asgn_bwd_sound.
+  + eapply hoare_consequence_sound.
+    - tauto.
+    - exact H.
+    - exact IHprovable.
+    - exact H1.
+    - exact H2.
+    - exact H3.
+  + eapply hoare_continue_sound.
+  + eapply hoare_break_sound.
 Qed.
-
-
 
 (* Thu Apr 25 12:10:27 UTC 2019 *)

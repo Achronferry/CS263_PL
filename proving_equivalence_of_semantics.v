@@ -586,6 +586,7 @@ Theorem multi_congr_CSeq: forall st1 s c1 st1' c1' c2,
   multi_cstep (CNormal s (CSeq c1 c2), st1)
         (CNormal s (CSeq c1' c2), st1').
 Proof.
+
    intros.
    Search CNormal.
   remember (CNormal s c1, st1) as x; remember (CNormal s c1', st1') as y.
@@ -595,22 +596,33 @@ Proof.
   + rewrite Heqx in H. rewrite Heqy in H. 
       pose proof CS_SeqStep _ _ _ _ _ c2 H. 
       eapply multi_cstep_step. exact H0.
+
+(*   intros.
+  remember (CNormal s c1) as c eqn:H0; remember (CNormal s c1') as c0 eqn:H1.
+  revert s c1 c1' H0 H1; induction_n1 H; intros; subst.
+  + inversion H1;subst.
+    unfold multi_cstep.
+    apply rt_refl.
+  + assert (CNormal s c3 = CNormal s c3) by reflexivity.
+ *)
+ 
+(*   intros.
+  remember (CNormal s c1, st1) as x; remember (CNormal s c1', st1') as y.
+  revert s c1 c2 c1' st1 st1' Heqx Heqy.
+  induction H;intros.
+  + rewrite Heqx in H.
+    rewrite Heqy in H. 
+    pose proof CS_SeqStep _ _ _ _ _ c2 H. 
+    eapply multi_cstep_step.
+    exact H0.
+
   + rewrite Heqy in Heqx. 
-      inversion Heqx.
-      eapply multi_cstep_refl.
-
+    inversion Heqx.
+    eapply multi_cstep_refl.
   + eapply IHclos_refl_trans2;subst.
-
-      - admit.
-      - reflexivity.
+    - admit.
+    - reflexivity. *)
 Admitted.
-(*   refine multi_cstep_ind_n1 multi_cstep _ _.
-  + apply multi_cstep_refl.
-  + eapply multi_cstep_trans_n1.
-    - exact IH.
-    - apply CS_SeqStep.
-      exact H0.
-Qed. *)
 
 Theorem multi_congr_CIf: forall st s b b' c1 c2,
   multi_bstep st b b' ->
@@ -833,12 +845,9 @@ Proof.
     pose proof multi_cstep_trans_n1 H4 H5.
     exact H6.
   + simpl in H0.
-    destruct H0.
-    destruct H0.
-    - destruct H0 as [st3 [? ?]].
-      specialize (IHn st3 st2 H2).
+    destruct H0 as [[[st3 [? ?]] | ?] ?].
+    - specialize (IHn st3 st2 H1).
       pose proof CS_While.
-      
 Admitted.
 (*   intros.
   revert st1 st2 H0; induction n; intros.
@@ -864,24 +873,18 @@ Admitted.
     destruct H0 as [[st [? ?]] ?].
 
     pose proof CS_While st1 b c as STEP1.
-    
     pose proof semantic_equiv_bexp1 st1 b.
     assert (multi_bstep st1 b BTrue). { tauto. }
     pose proof multi_congr_CIf _ _ _ (c;; While b Do c EndWhile) Skip H4
       as STEP2.
     clear H4 H3 H2.
-    
     pose proof CS_IfTrue st1 (c;; While b Do c EndWhile) Skip as STEP3.
-    
     pose proof H _ _ H0.
     pose proof multi_congr_CSeq _ _ _ _ (While b Do c EndWhile) H2 as STEP4.
     clear H H0 H2.
-    
     pose proof CS_Seq st (While b Do c EndWhile) as STEP5.
-    
     pose proof IHn _ _ H1 as STEP6.
     clear IHn H1.
-    
     pose proof multi_cstep_trans_1n STEP1 STEP2.
     pose proof multi_cstep_trans_n1 H STEP3.
     pose proof multi_cstep_trans H0 STEP4.
@@ -891,7 +894,6 @@ Admitted.
 Qed.
  *)
 
-(*新加的 | 不保证能证明出来*)
 
 Lemma semantic_equiv_iter_loop2: forall st1 st2  c s  b n,
 iter_loop_body2 b (ceval c) n st1 st2 ->
@@ -993,12 +995,12 @@ Proof.
   + destruct H. discriminate H0.
   + destruct H. discriminate H0.
   + destruct H.
-    - destruct H as [st3 [? [? [? ?]]]].
-      pose proof semantic_equiv_iter_loop3 st1 st2 st3 c1 c2 c3 s b x H H0 IHc1 IHc2 IHc3.
-      pose proof (CS_For st1 s (For( c1; b; c2) c3 EndFor) c1 b _ _ _) (SWFL_For c1 b c2 c3).
-      eapply multi_cstep_trans_1n.
-      exact H3. exact H2.
-    - firstorder.
+    destruct H as [? [[n ?] ?]].
+    pose proof semantic_equiv_iter_loop3 st1 st2 x c1 c2 c3 s b n H H0 IHc1 IHc2 IHc3.
+    pose proof (CS_For st1 s (For( c1; b; c2) c3 EndFor) c1 b _ _ _) (SWFL_For c1 b c2 c3).
+    eapply multi_cstep_trans_1n.
+    exact H3.
+    exact H2.
   + destruct H as [? [] ].
     pose proof (CS_DoWhile st1 s (Do c While b EndWhile) b _ CSkip) (SWDL_Dowhile _ b).
     eapply multi_cstep_trans_1n.
@@ -1033,14 +1035,17 @@ Proof.
     - destruct H.
       pose proof (IHc1 _ _) H.
       destruct H1 as [c' [? ?]].
-      exists (c';;c2)%imp. split.
+      exists (c';;c2)%imp.
+      split.
       * eapply multi_congr_CSeq.
-         exact H1.
+        exact H1.
       * eapply SWB_Seq.
-         exact H2.
-  + pose proof semantic_equiv_bexp1 st1 b. destruct H0.
+        exact H2.
+  + pose proof semantic_equiv_bexp1 st1 b.
+    destruct H0.
     destruct H.
-    - destruct H. pose proof H0 H2;clear H0 H1 H2.
+    - destruct H.
+      pose proof H0 H2;clear H0 H1 H2.
       pose proof (IHc1 _ _) H; clear IHc1 H.
       destruct H0 as [c' [? ?]].
       exists c'.
@@ -1051,7 +1056,8 @@ Proof.
         pose proof multi_cstep_trans H4 H.
         exact H5.
       * exact H0.
-    - destruct H. pose proof H1 H2;clear H0 H1 H2.
+    - destruct H.
+      pose proof H1 H2;clear H0 H1 H2.
       pose proof (IHc2 _ _) H; clear IHc1 H.
       destruct H0 as [c' [? ?]].
       exists c'.
@@ -1072,9 +1078,9 @@ Proof.
     apply SWB_Break.
   + destruct H. discriminate H0.
   + destruct H as [? [? [? ?]]].
-      discriminate H1.
+    discriminate H1.
   + destruct H as [?[]].
-      discriminate H0.
+    discriminate H0.
 Qed.
 
 
@@ -1103,14 +1109,17 @@ Proof.
     - destruct H.
       pose proof (IHc1 _ _) H.
       destruct H1 as [c' [? ?]].
-      exists (c';;c2)%imp. split.
+      exists (c';;c2)%imp.
+      split.
       * eapply multi_congr_CSeq.
-         exact H1.
+        exact H1.
       * eapply SWC_Seq.
-         exact H2.
-  + pose proof semantic_equiv_bexp1 st1 b. destruct H0.
+        exact H2.
+  + pose proof semantic_equiv_bexp1 st1 b.
+    destruct H0.
     destruct H.
-    - destruct H. pose proof H0 H2;clear H0 H1 H2.
+    - destruct H.
+      pose proof H0 H2;clear H0 H1 H2.
       pose proof (IHc1 _ _) H; clear IHc1 H.
       destruct H0 as [c' [? ?]].
       exists c'.
@@ -1121,7 +1130,8 @@ Proof.
         pose proof multi_cstep_trans H4 H.
         exact H5.
       * exact H0.
-    - destruct H. pose proof H1 H2;clear H0 H1 H2.
+    - destruct H.
+      pose proof H1 H2;clear H0 H1 H2.
       pose proof (IHc2 _ _) H; clear IHc1 H.
       destruct H0 as [c' [? ?]].
       exists c'.
@@ -1143,9 +1153,9 @@ Proof.
     eapply multi_cstep_refl.
     apply SWC_Break.
   + destruct H as [? [? [? ?]]].
-      discriminate H1.
+    discriminate H1.
   + destruct H as [? []].
-      discriminate H0.
+    discriminate H0.
 Qed.
 
 Theorem semantic_equiv_com1: forall st1 st2 c s,
@@ -1195,6 +1205,16 @@ Proof.
   inversion H0.
 Qed.
 
+
+
+Lemma CSkip_step: forall st st' c s,
+  cstep(CNormal s CSkip, st) (CNormal s c, st') ->
+  c = CSkip /\ st = st'.
+Proof.
+  intros.
+  inversion H;subst;inversion H1.
+Qed.
+
 Lemma CSkip_halt: forall st st' c s,
   multi_cstep(CNormal s CSkip, st) (CNormal s c, st') ->
   c = CSkip /\ st = st'.
@@ -1202,22 +1222,29 @@ Proof.
   intros.
   remember (CNormal s Skip, st) as C'.
   remember (CNormal s c, st') as C''.
-  revert HeqC' HeqC'' .
+  revert HeqC' HeqC''.
   revert c s st st'.
   induction H; intros; split; subst.
   + inversion H;
     subst.
     - inversion H1.
-    - admit.
-    - admit.
     - inversion H1.
     - inversion H1.
+    (*
+    - remember ( (Dowhileloop c1 b c2 :: s0)%list) as L.
+      revert HeqL.
+      inversion H; intros; subst.
+      * inversion H1.
+      * 
+      * inversion HeqL.
+      * inversion HeqL.
+      * inversion H1.
+      * inversion HeqL.
+    - admit.
     - inversion H1.
   + inversion H; subst.
     - reflexivity.
-    - admit.
-    - reflexivity.
-    - reflexivity.
+    - inversion H1.
     - reflexivity.
     - reflexivity.
   + inversion HeqC''.
@@ -1226,8 +1253,9 @@ Proof.
     reflexivity.
   + admit.
   + admit.
-
+  *)
 Admitted.
+
 
 
 Lemma APlus_path_spec: forall st a1 a2 n,
@@ -1630,29 +1658,37 @@ Lemma CAss_path_spec: forall X a st1 st2 s,
   st2 X = n /\
   (forall Y : var, X <> Y -> st1 Y = st2 Y).
 Proof.
-Admitted.
-(*   intros.
-  remember (CAss X a) as c eqn:H0.
-  remember CSkip as c' eqn:H1.
-  revert a H0 H1; induction_1n H; intros; subst.
+  intros.
+  remember (CNormal s (CAss X a)) as c eqn:H0.
+  remember (CNormal s Skip) as c0 eqn:H1.
+  revert a s X H0 H1; induction_1n H; intros; subst.
   + inversion H1.
   + inversion H; subst.
-    - assert (CAss X a' = CAss X a'). { reflexivity. }
-      assert (CSkip = CSkip). { reflexivity. }
-      pose proof IH _ H1 H3.
+    - assert (CNormal s (CAss X a') = CNormal s (CAss X a')) by reflexivity.
+      assert (CNormal s Skip = CNormal s Skip) by reflexivity.
+      pose proof IH _ _ _ H1 H3.
       clear IH H1 H3.
       destruct H4 as [n [? ?]].
       exists n.
       pose proof multi_astep_trans_1n H2 H1.
       tauto.
     - clear IH.
-      apply CSkip_halt in H0.
+      apply CSkip_halt in H0. 
       destruct H0.
       subst st0.
       exists (st2 X).
       pose proof multi_astep_refl st1 (ANum (st2 X)).
       tauto.
-Qed. *)
+    - inversion H; subst; inversion H2.
+    - inversion H; subst; inversion H2.
+    - inversion H2.
+    - inversion H2.
+    - inversion H2.
+    - inversion H2.
+    - inversion H2.
+    - inversion H2.
+    - inversion H2.
+Qed.
 
 Lemma CSeq_path_spec: forall c1 st1 c2 st3 s,
   multi_cstep (CNormal s (CSeq c1 c2), st1) (CNormal s CSkip, st3) ->
@@ -1660,25 +1696,28 @@ Lemma CSeq_path_spec: forall c1 st1 c2 st3 s,
   multi_cstep (CNormal s c1, st1) (CNormal s CSkip, st2) /\
   multi_cstep (CNormal s c2, st2) (CNormal s CSkip, st3).
 Proof.
-Admitted.
-(*   intros.
-  remember (CSeq c1 c2) as c eqn:H0.
-  remember CSkip as c' eqn:H1.
-  revert c1 c2 H0 H1; induction_1n H; intros; subst.
+  intros.
+  remember (CNormal s (c1;; c2)) as c eqn:H0.
+  remember (CNormal s Skip) as c0 eqn:H1.
+  revert c1 c2 s H0 H1. induction_1n H; intros; subst.
   + inversion H1.
   + inversion H; subst.
-    - assert (CSeq c1' c2 = CSeq c1' c2). { reflexivity. }
-      assert (CSkip = CSkip). { reflexivity. }
-      pose proof IH _ _ H1 H3.
+    - assert (CNormal s (c1';; c3) = CNormal s (c1';; c3)) by reflexivity.
+      assert (CNormal s Skip = CNormal s Skip) by reflexivity.
+      pose proof IH _ _ _ H1 H3.
       clear IH H1 H3.
       destruct H4 as [st2 [? ?]].
       exists st2.
       pose proof multi_cstep_trans_1n H2 H1.
       tauto.
-    - exists st0.
-      pose proof multi_cstep_refl st0 CSkip.
+    - clear IH.
+      exists st0.
+      pose proof multi_cstep_refl st0 (CNormal s Skip).
       tauto.
-Qed. *)
+    - clear IH.
+      inversion H2; subst.
+      pose proof multi_cstep_trans_1n H H0.
+Admitted.
 
 Lemma CIf_path_spec: forall b c1 c2 st1 st2 s,
   multi_cstep (CNormal s (CIf b c1 c2), st1) (CNormal s CSkip, st2) ->
@@ -1687,27 +1726,32 @@ Lemma CIf_path_spec: forall b c1 c2 st1 st2 s,
   multi_bstep st1 b BFalse /\
   multi_cstep (CNormal s c2, st1) (CNormal s CSkip, st2).
 Proof.
-Admitted.
-(*   intros.
-  remember (CIf b c1 c2) as c eqn:H0.
-  remember CSkip as c' eqn:H1.
-  revert b c1 c2 H0 H1; induction_1n H; intros; subst.
+  intros.
+  remember (CNormal s (If b Then c1 Else c2 EndIf)) as c eqn:H0;
+  remember (CNormal s Skip) as c0 eqn:H1.
+  revert b c1 c2 s H0 H1; induction_1n H; intros; subst.
   + inversion H1.
   + inversion H; subst.
-    - assert (CIf b' c1 c2 = CIf b' c1 c2). { reflexivity. }
-      assert (CSkip = CSkip). { reflexivity. }
-      pose proof IH _ _ _ H1 H3.
-      clear IH H1 H3.
-      destruct H4 as [[? ?] | [? ?]].
-      * pose proof multi_bstep_trans_1n H2 H1.
-        tauto.
-      * pose proof multi_bstep_trans_1n H2 H1.
-        tauto.
+    - assert (CNormal s (If b' Then c2 Else c3 EndIf) = CNormal s (If b' Then c2 Else c3 EndIf)) by reflexivity.
+      assert (CNormal s Skip = CNormal s Skip) by reflexivity.
+      pose proof IH _ _ _ _ H1 H3.
+      clear H1 H3 IH.
+      destruct H4 as [[? ?] | [? ?]]; pose proof multi_bstep_trans_1n H2 H1; tauto.
     - pose proof multi_bstep_refl st0 BTrue.
       tauto.
     - pose proof multi_bstep_refl st0 BFalse.
       tauto.
-Qed. *)
+    - inversion H2.
+    - inversion H2.
+    - inversion H2.
+    - inversion H2.
+    - inversion H2.
+    - inversion H2.
+    - inversion H2.
+    - inversion H2.
+    - inversion H2.
+Qed.
+
 Fixpoint CWhile_path s b c1 st1 st2 (n: nat): Prop:=
   match n with
   | O => multi_bstep st1 b BFalse /\ st1 = st2
@@ -1746,6 +1790,15 @@ Lemma CWhile_path_spec_aux: forall s st1 st2 c c',
      c' = CNormal  s CSkip%imp ->
      exists n, CWhile_path'' s c1' b c1 st1 st2 n).
 Proof.
+  intros.
+  induction_1n H; intros.
+  + split; [intros; subst; inversion H0|].
+    split; intros; subst; inversion H0.
+  + split.
+    - intros; subst.
+      destruct IH as [? [IH ?]].
+      clear H1 H2.
+      inversion H; subst.
 Admitted.
 (*   intros.
   induction_1n H; intros.
@@ -2001,32 +2054,45 @@ Proof.
           pose proof H1 _ H2.
           tauto.
         }
-    - split.
-      * intros.
-        destruct H.
-        destruct H.
-        inversion H; admit.
-(*       revert H H0; induction x; intros.
-      - inversion H0.
-      - inversion H0.
-      - apply IHx1.
-          admit.
-          inversion H0.
-          exact H2.
-      - inversion H0.
-      - inversion H0.
-      -  *)
-      * admit.
-      (* 
-      inversion H0.
-      simpl.
-      unfold asgn_sem.
-      split.
-      exists CSkip.
-      intros.
-      destruct H.
-      apply CAss_path_spec in H.
-      inversion H0. *)
+    - split; intros.
+      * destruct H as [c [? ?]].
+        inversion H; subst.
+        {
+          inversion H1; subst.
+          + inversion H0.
+          + inversion H0.
+          + inversion H0; subst.
+            - inversion H1; subst.
+              * inversion H4.
+              * inversion H4.
+              * inversion H4.
+              * inversion H4.
+            - inversion H3.
+          + inversion H3.
+          + inversion H3.
+          + inversion H3.
+        }
+        { inversion H0. }
+        { admit. }
+      * destruct H as [c [? ?]].
+        inversion H; subst.
+        {
+          inversion H1; subst.
+          + inversion H0.
+          + inversion H0.
+          + inversion H0; subst.
+            - inversion H1; subst.
+              * inversion H4.
+              * inversion H4.
+              * inversion H4.
+              * inversion H4.
+            - inversion H3.
+          + inversion H3.
+          + inversion H3.
+          + inversion H3.
+        }
+        { inversion H0. }
+        { admit. }
  + split.
   - intros.
     apply CSeq_path_spec in H.
@@ -2040,18 +2106,16 @@ Proof.
     tauto.
   - split.
     * intros.
-      destruct H.
+      destruct H as [c [? ?]].
       simpl.
       unfold seq_sem.
       right.
       split.
+      { admit. }
       {
-        destruct H.
-        admit.
-      }
-      {
-        destruct H.
-        inversion H0; unfold not; intros . discriminate H2. discriminate H3. 
+        inversion H0; unfold not; intros .
+        discriminate H2.
+        discriminate H3.
       }
      * intros.
        destruct H.
@@ -2190,15 +2254,6 @@ Admitted.
 (* ################################################################# *)
 (** * Final Theorem *)
 
-Theorem semantic_equiv_com2_trans: forall s c st1 st2,
-(exists c' : com, multi_cstep (CNormal s c, st1) (CNormal s c', st2) /\ start_with_break c' -> ceval c st1 EK_Break st2) ->
-((exists c' : com, multi_cstep (CNormal s c, st1) (CNormal s c', st2) /\ start_with_break c') -> ceval c st1 EK_Break st2).
-Proof.
-  intros.
-  destruct H.
-
-Admitted.
-
 Theorem semantic_equiv: forall s c st1 st2,
 (ceval c st1 EK_Normal st2 <->  multi_cstep (CNormal s c, st1) (CNormal s CSkip, st2))  /\
 (ceval c st1 EK_Break st2  <->  exists c', multi_cstep (CNormal s c, st1) (CNormal s c', st2) /\ start_with_break c') /\
@@ -2212,4 +2267,4 @@ Proof.
   + apply semantic_equiv_com2.
   + apply semantic_equiv_com1.
   + apply semantic_equiv_com2.
-Admitted.
+Qed.
