@@ -587,8 +587,10 @@ Theorem multi_congr_CSeq: forall st1 s c1 st1' c1' c2,
         (CNormal s (CSeq c1' c2), st1').
 Proof.
    intros.
+   Search CNormal.
   remember (CNormal s c1, st1) as x; remember (CNormal s c1', st1') as y.
   revert s c1 c2 c1' st1 st1' Heqx Heqy.
+  eapply Operators_Properties.clos_rt_rtn1 in H.
    induction H;intros.
   + rewrite Heqx in H. rewrite Heqy in H. 
       pose proof CS_SeqStep _ _ _ _ _ c2 H. 
