@@ -347,13 +347,13 @@ Ltac induction_n1 H :=
              [intros b1 | intros b1 ?b1 b2 ? ? ?]
            end
       end
-  | multi_cstep (?c1, ?st1) (?c2, ?st2) =>
+  | multi_cstep (CNormal ?s, ?c1, ?st1) (CNormal ?s, ?c2, ?st2) =>
       match goal with
       | |- ?P =>
-           let Q := eval pattern c1, st1, c2, st2 in P in
+           let Q := eval pattern s,c1, st1, c2, st2 in P in
            match Q with
-           | ?R c1 st1 c2 st2 =>
-             revert c1 c2 st1 st2 H;
+           | ?R s c1 st1 c2 st2 =>
+             revert s c1 c2 st1 st2 H;
              refine (multi_cstep_ind_n1 R _ _);
              [intros c1 st1 | intros c1 ?c1 c2 st1 ?st1 st2 ? ? ?]
            end
@@ -384,15 +384,15 @@ Ltac induction_1n H :=
              [intros b1 | intros b1 ?b1 b2 ? ? ?]
            end
       end
-  | multi_cstep (?c1, ?st1) (?c2, ?st2) =>
+  | multi_cstep (CNormal ?s ?c1, ?st1) (CNormal ?s ?c2, ?st2) =>
       match goal with
       | |- ?P =>
-           let Q := eval pattern c1, st1, c2, st2 in P in
+           let Q := eval pattern s, c1, st1, c2, st2 in P in
            match Q with
-           | ?R c1 st1 c2 st2 =>
-             revert c1 c2 st1 st2 H;
+           | ?R s c1 st1 c2 st2 =>
+             revert s c1 c2 st1 st2 H;
              refine (multi_cstep_ind_1n R _ _);
-             [intros c1 st1 | intros c1 ?c1 c2 st1 ?st1 st2 ? ? ?]
+             [intros c1 st1 | intros s c1 ?c1 c2 st1 ?st1 st2 ? ? ?]
            end
       end 
   end.
@@ -580,37 +580,24 @@ Proof.
       exact H0.
 Qed.
 
+
 Theorem multi_congr_CSeq: forall st1 s c1 st1' c1' c2,
   multi_cstep (CNormal s c1, st1)
         (CNormal s c1', st1') ->
   multi_cstep (CNormal s (CSeq c1 c2), st1)
         (CNormal s (CSeq c1' c2), st1').
 Proof.
-(*   intros.
-  remember (CNormal s c1) as c eqn:H0; remember (CNormal s c1') as c0 eqn:H1.
-  revert s c1 c1' H0 H1; induction_n1 H; intros; subst.
-  + inversion H1;subst.
-    unfold multi_cstep.
-    apply rt_refl.
-  + assert (CNormal s c3 = CNormal s c3) by reflexivity.
- *)
- 
-(*   intros.
+   intros.
   remember (CNormal s c1, st1) as x; remember (CNormal s c1', st1') as y.
   revert s c1 c2 c1' st1 st1' Heqx Heqy.
-  induction H;intros.
-  + rewrite Heqx in H.
-    rewrite Heqy in H. 
-    pose proof CS_SeqStep _ _ _ _ _ c2 H. 
-    eapply multi_cstep_step.
-    exact H0.
-  + rewrite Heqy in Heqx. 
-    inversion Heqx.
-    eapply multi_cstep_refl.
-  + eapply IHclos_refl_trans2;subst.
-    - admit.
-    - reflexivity. *)
+  eapply Operators_Properties.clos_rt_rt1n in H.
+   induction H;intros.
+  - rewrite Heqx in Heqy.
+      inversion Heqy. 
+      eapply multi_cstep_refl.
+  - subst. 
 Admitted.
+
 
 Theorem multi_congr_CIf: forall st s b b' c1 c2,
   multi_bstep st b b' ->
