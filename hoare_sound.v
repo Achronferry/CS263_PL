@@ -79,7 +79,7 @@ Proof.
     destruct H0 as [? [? ?]].
     clear H1 H4 H5.
     pose proof H0 H3.
-    exact H1.
+    tauto.
   + destruct H2.
     tauto.
 
@@ -93,7 +93,7 @@ Proof.
     destruct H0 as [? [? ?]].
     clear H1 H0 H5.
     pose proof H4 H3.
-    exact H0.
+    tauto.
   + destruct H2.
     specialize (H _ _ st2 H1).
     tauto.
@@ -108,7 +108,7 @@ Proof.
     destruct H0 as [? [? ?]].
     clear H1 H0 H4.
     pose proof H5 H3.
-    exact H0.
+    tauto.
   + destruct H2.
     specialize (H _ _ st2 H1).
     tauto.
@@ -124,7 +124,7 @@ Proof.
 
   (* EK_Normal *)
   + rewrite <- H0.
-    exact H.
+    tauto.
 
   (* EK_Break *)
   + discriminate H1.
@@ -146,7 +146,7 @@ Proof.
 
   (* EK_Break *)
   + rewrite <- H0.
-    exact H.
+    tauto.
 
   (* EK_Cont *)
   + destruct H0.
@@ -169,7 +169,7 @@ Proof.
 
   (* EK_Cont *)
   + rewrite <- H0.
-    exact H.
+    tauto.
 Qed.
 
 
@@ -188,36 +188,36 @@ Proof.
     - simpl.
       pose proof beval_bexp'_denote st1 La b.
       tauto.
-    - exact H2.
+    - tauto.
   + apply H0 with st1.
     - simpl.
       pose proof beval_bexp'_denote st1 La b.
       tauto.
-    - exact H2.
+    - tauto.
 
   (* EK_Break *)
   + apply H with st1.
     - simpl.
       pose proof beval_bexp'_denote st1 La b.
       tauto.
-    - exact H2.
+    - tauto.
   + apply H0 with st1.
     - simpl.
       pose proof beval_bexp'_denote st1 La b.
       tauto.
-    - exact H2.
+    - tauto.
 
   (* EK_Cont *)
   + apply H with st1.
     - simpl.
       pose proof beval_bexp'_denote st1 La b.
       tauto.
-    - exact H2.
+    - tauto.
   + apply H0 with st1.
     - simpl.
       pose proof beval_bexp'_denote st1 La b.
       tauto.
-    - exact H2.
+    - tauto.
 Qed.
 
 Lemma hoare_while_sound : forall I P(b: bexp) c,
@@ -242,10 +242,10 @@ Proof.
       * specialize (H _ _ x H5).
         destruct H.
         pose proof H H1.
-        exact H7.
+        tauto.
       * split.
-        exact H4.
-        exact H2.
+        tauto.
+        tauto.
     - assert ((st1, La) |== I AND {[b]}).
       * simpl.
         pose proof beval_bexp'_denote st1 La b.
@@ -255,7 +255,7 @@ Proof.
         pose proof H5 H1.
         simpl.
         left.
-        exact H7.
+        tauto.
     - assert ((st1, La) |== I AND {[b]}).
       * simpl.
         pose proof beval_bexp'_denote st1 La b.
@@ -264,10 +264,10 @@ Proof.
         destruct H as [? [? ?]].
         pose proof H7 H1.
         apply IHn with x.
-        exact H8.
+        tauto.
         split.
-        exact H4.
-        exact H2.
+        tauto.
+        tauto.
   + destruct H1.
     discriminate H2.
   + destruct H1.
@@ -321,7 +321,7 @@ Proof.
         pose proof H6 H.
         simpl.
         left.
-        exact H8.
+        tauto.
     - assert ((st1', La) |== I AND {[b]}).
       * simpl.
         pose proof beval_bexp'_denote st1' La b.
@@ -334,7 +334,7 @@ Proof.
         destruct H5.
         pose proof H1 H5.
         apply IHn with x0.
-        exact H13.
+        tauto.
         tauto.
   + destruct H3.
     tauto.
@@ -344,14 +344,14 @@ Proof.
     specialize (H _ _ st2 H2).
     destruct H as [? [? ?]].
     pose proof H5 H3.
-    exact H7.
+    tauto.
   + destruct H3 as [? [? [? [? ?]]]].
     discriminate H5.
   + destruct H3.
     specialize (H _ _ st2 H2).
     destruct H as [? [? ?]].
     pose proof H6 H3.
-    exact H7.
+    tauto.
 Qed.
 
 Lemma hoare_dowhile_sound : forall U I P0 P1 (b:bexp) c,
@@ -378,7 +378,7 @@ Proof.
         simpl.
         left.
         left.
-        exact H6.
+        tauto.
       * specialize (H _ _ st2 H1).
         destruct H as [? [? ?]].
         pose proof H6 H2.
@@ -392,7 +392,8 @@ Proof.
         pose proof H H2.
         destruct H4.
         clear st1 H H5 H6 H1 H2 H3.
-        revert st2 H4 H7; induction n; intros.
+        generalize dependent x.
+        induction n; intros.
         {
           assert ((x, La) |== I AND {[b]}).
           {
@@ -402,8 +403,7 @@ Proof.
           }
           pose proof beval_bexp'_denote st2 La b.
           simpl in H4; destruct H4.
-          {
-            specialize (H0 _ _ st2 H).
+          + specialize (H0 _ _ st2 H).
             destruct H0 as [? [? ?]].
             clear H3 H4.
             destruct H2.
@@ -411,11 +411,8 @@ Proof.
             simpl.
             right.
             tauto.
-          }
-          {
-            destruct H2.
-            {
-              specialize (H0 _ _ st2 H).
+          + destruct H2.
+            - specialize (H0 _ _ st2 H).
               destruct H0 as [? [? ?]].
               clear H0 H4.
               pose proof H3 H2.
@@ -423,9 +420,7 @@ Proof.
               left.
               right.
               tauto.
-            }
-            {
-              destruct H2.
+            - destruct H2.
               specialize (H0 _ _ st2 H).
               destruct H0 as [? [? ?]].
               clear H0 H4.
@@ -433,8 +428,6 @@ Proof.
               simpl.
               right.
               tauto.
-            }
-          }
         }
         {
           assert ((x, La) |== I AND {[b]}).
@@ -444,18 +437,122 @@ Proof.
             tauto.
           }
           destruct H4.
-          destruct H1 as [x0 [? [? ?]]].
-          pose proof H0 _ _ x0 H.
-          destruct H4 as [? [? ?]].
-          pose proof H4 H1.
-          {
+          + destruct H1 as [? [? [? ?]]].
+            pose proof H0 _ _ x0 H.
+            destruct H4 as [? [? ?]].
+            pose proof H4 H1.
+            apply IHn with x0.
+            tauto.
+            tauto.
+            tauto.
+          + destruct H1.
+            - pose proof H0 _ _ st2 H.
+              destruct H2 as [? [? ?]].
+              pose proof H3 H1.
+              simpl.
+              left.
+              right.
+              tauto.
+            - destruct H1 as [? [? [? ?]]].
+              pose proof H0 _ _ x0 H.
+              destruct H4 as [? [? ?]].
+              pose proof H6 H1.
+              apply IHn with x0.
+              tauto.
+              tauto.
+              tauto.
+         }
+      * pose proof H _ _ st2 H1.
+        destruct H4 as [? [? ?]].
+        pose proof H5 H2.
+        simpl.
+        left.
+        left.
+        tauto.
+      * pose proof H _ _ x H1.
+        destruct H5 as [? [? ?]].
+        pose proof H7 H2.
+        assert ((x, La) |== I AND {[b]}).
+        {
+          simpl.
+          pose proof beval_bexp'_denote x La b.
+          tauto.
+        }
+        clear st1 H H1 H2 H3 H5 H6 H7.
+        generalize dependent x.
+        induction n; intros.
+        {
+          destruct H4.
+          repeat destruct H.
+          + pose proof H0 _ _ st2 H9.
+            destruct H3 as [? [? ?]].
+            pose proof H3 H.
+            simpl.
+            right.
+            pose proof beval_bexp'_denote st2 La b.
+            tauto.
+          + pose proof H0 _ _ st2 H9.
+            destruct H2 as [? [? ?]].
+            pose proof H3 H.
+            simpl.
+            left.
+            right.
+            tauto.
+          + pose proof H0 _ _ st2 H9.
+            destruct H3 as [? [? ?]].
+            pose proof H5 H.
+            simpl.
+            right.
+            pose proof beval_bexp'_denote st2 La b.
+            tauto.
+        }
+        {
+          destruct H4.
+          destruct H.
+          + destruct H as [? [? [? ?]]].
+            pose proof H0 _ _ x0 H9.
+            destruct H4 as [? [? ?]].
+            pose proof H4 H.
             assert ((x0, La) |== I AND {[b]}).
             {
               simpl.
               pose proof beval_bexp'_denote x0 La b.
               tauto.
             }
-Admitted.
+            apply IHn with x0.
+            tauto.
+            tauto.
+            tauto.
+          + destruct H.
+            - pose proof H0 _ _ st2 H9.
+              destruct H2 as [? [? ?]].
+              pose proof H3 H.
+              simpl.
+              left.
+              right.
+              tauto.
+            - destruct H as [? [? [? ?]]].
+              pose proof H0 _ _ x0 H9.
+              destruct H4 as [? [? ?]].
+              pose proof H6 H.
+              assert ((x0, La) |== I AND {[b]}).
+              {
+                simpl.
+                pose proof beval_bexp'_denote x0 La b.
+                tauto.
+              }
+              apply IHn with x0.
+              tauto.
+              tauto.
+              tauto.
+        }
+  + destruct H2.
+   destruct H2.
+   discriminate H3.
+  + destruct H2.
+   destruct H2.
+   discriminate H3.
+Qed.
 
 Lemma Assertion_sub_spec: forall st1 st2 La (P: Assertion) (X: var) (E: aexp),
   st2 X = aexp'_denote (st1, La) E ->
@@ -464,7 +561,8 @@ Lemma Assertion_sub_spec: forall st1 st2 La (P: Assertion) (X: var) (E: aexp),
 Proof.
   intros.
   split; intros.
-  + rewrite <- aeval_aexp'_denote in H.
+  + rewrite <- aeval_aexp'_denote in H. admit.
+  + rewrite <- aeval_aexp'_denote in H. admit.
   (* FILL IN HERE *) Admitted.
 
 Lemma hoare_asgn_bwd_sound : forall P (X: var) (E: aexp),
