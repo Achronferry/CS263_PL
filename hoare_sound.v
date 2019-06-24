@@ -554,16 +554,28 @@ Proof.
    discriminate H3.
 Qed.
 
+Lemma Assertion_sub_spec_lemma1: forall st La (P: Assertion) (E: aexp'),
+  (st, La) |== rename_all E P <-> (st, La) |== P.
+Proof.
+Admitted.
+
+Lemma Assertion_sub_spec_lemma2: forall st1 st2 La (P: Assertion) (X: var) (E: aexp'),
+  st2 X = aexp'_denote (st1, La) E ->
+  (forall Y : var, X <> Y -> st1 Y = st2 Y) ->
+  (st1, La) |== naive_sub X E (rename_all E P) <-> (st2, La) |== rename_all E P.
+Proof.
+Admitted.
+
 Lemma Assertion_sub_spec: forall st1 st2 La (P: Assertion) (X: var) (E: aexp),
   st2 X = aexp'_denote (st1, La) E ->
   (forall Y : var, X <> Y -> st1 Y = st2 Y) ->
   ((st1, La) |== P[ X |-> E]) <-> ((st2, La) |== P).
 Proof.
   intros.
-  split; intros.
-  + rewrite <- aeval_aexp'_denote in H. admit.
-  + rewrite <- aeval_aexp'_denote in H. admit.
-  (* FILL IN HERE *) Admitted.
+  pose proof Assertion_sub_spec_lemma2 st1 st2 La P X E H H0.
+  pose proof Assertion_sub_spec_lemma1 st2 La P E.
+  tauto.
+Qed.
 
 Lemma hoare_asgn_bwd_sound : forall P (X: var) (E: aexp),
   |== {{ P [ X |-> E] }} X ::= E {{ P }}{{{[BFalse]}}}{{{[BFalse]}}}.
@@ -684,5 +696,3 @@ Proof.
   + eapply hoare_continue_sound.
   + eapply hoare_break_sound.
 Qed.
-
-(* Thu Apr 25 12:10:27 UTC 2019 *)
