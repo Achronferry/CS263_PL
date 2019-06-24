@@ -228,6 +228,8 @@ Proof.
   intros.
   repeat split; intros;
   simpl in H1; destruct H1 as [n ?].
+  
+  (* EK_Normal *)
   + revert st1 H0 H1; induction n; intros;
     simpl in H1; repeat destruct H1.
     - simpl.
@@ -268,8 +270,12 @@ Proof.
         split.
         tauto.
         tauto.
+
+  (* EK_Break *)
   + destruct H1.
     discriminate H2.
+
+  (* EK_Cont *)
   + destruct H1.
     discriminate H2.
 Qed.
@@ -282,9 +288,11 @@ Lemma hoare_for_sound : forall U I IT P c1 (b:bexp) c2 c3,
 Proof.
   unfold valid.
   intros.
-  repeat split;intros;
-  simpl in H3; destruct H3.
-  + destruct H3 as [st1'[? ?]].
+  repeat split;intros.
+
+  (* EK_Normal *)
+  + simpl in H3; destruct H3.
+    destruct H3 as [st1'[? ?]].
     specialize (H _ _ st1' H2).
     destruct H.
     clear H2 H5.
@@ -336,22 +344,26 @@ Proof.
         apply IHn with x0.
         tauto.
         tauto.
-  + destruct H3.
-    tauto.
-  + destruct H3 as [? [? [? [? ?]]]].
-    discriminate H5.
-  + destruct H3.
-    specialize (H _ _ st2 H2).
-    destruct H as [? [? ?]].
-    pose proof H5 H3.
-    tauto.
-  + destruct H3 as [? [? [? [? ?]]]].
-    discriminate H5.
-  + destruct H3.
-    specialize (H _ _ st2 H2).
-    destruct H as [? [? ?]].
-    pose proof H6 H3.
-    tauto.
+    - destruct H3.
+      tauto.
+
+  (* EK_Break *)
+  + simpl in H3; destruct H3.
+    - destruct H3 as [? [? [? [? ?]]]].
+      discriminate H5.
+    - destruct H3.
+      specialize (H _ _ st2 H2).
+      destruct H as [? [? ?]].
+      tauto.
+
+  (* EK_Cont *)
+  + simpl in H3; destruct H3.
+    - repeat destruct H3 as [? [? [? [? ?]]]].
+      discriminate H5.
+    - destruct H3.
+      specialize (H _ _ st2 H2).
+      destruct H as [? [? ?]].
+      tauto.
 Qed.
 
 Lemma hoare_dowhile_sound : forall U I P0 P1 (b:bexp) c,
@@ -362,6 +374,8 @@ Proof.
   unfold valid.
   intros.
   repeat split; intros.
+
+  (* EK_Normal *)
   + destruct H2 as [n ?].
     destruct n.
     - repeat destruct H2.
@@ -391,7 +405,7 @@ Proof.
         destruct H as [? [? ?]].
         pose proof H H2.
         destruct H4.
-        clear st1 H H5 H6 H1 H2 H3.
+        clear st1 H H1 H2 H3 H5 H6.
         generalize dependent x.
         induction n; intros.
         {
@@ -546,9 +560,13 @@ Proof.
               tauto.
               tauto.
         }
+
+  (* EK_Break *)
   + destruct H2.
    destruct H2.
    discriminate H3.
+
+  (* EK_Cont *)
   + destruct H2.
    destruct H2.
    discriminate H3.
@@ -583,8 +601,9 @@ Proof.
   unfold valid.
   intros.
   repeat split; intros.
+
+  (* EK_Normal *)
   + simpl in H0.
-    unfold asgn_sem in H0.
     destruct H0.
     pose proof aeval_aexp'_denote st1 La E.
     rewrite H2 in H0.
@@ -593,14 +612,16 @@ Proof.
     - intros.
       destruct H1.
       specialize (H5 Y H4).
-      exact H5.
-    - exact H.
+      tauto.
+    - tauto.
+
+  (* EK_Break *)
   + simpl in H0.
-    unfold asgn_sem in H0.
     destruct H0 as [? [? ?]].
     discriminate H1.
+
+  (* EK_Cont *)
   + simpl in H0.
-    unfold asgn_sem in H0.
     destruct H0 as [? [? ?]].
     discriminate H1.
 Qed.
@@ -630,32 +651,35 @@ Proof.
     tauto.
   }
   repeat split;intros.
-  -
-  specialize (H1 _ _ st2 H6).
-  destruct H1 as [? [? ?]].
-  pose proof H1 H7.
-  specialize (H2 (st2, La)).
-  tauto.
-  -
-  specialize (H1 _ _ st2 H6).
-  destruct H1 as [? [? ?]].
-  pose proof H8 H7.
-  unfold derives in H3.
-  apply H in H3.
-  unfold FOL_valid in H3.
-  simpl in H3.
-  specialize (H3 (st2, La)).
-  tauto.
-  - 
-  specialize (H1 _ _ st2 H6).
-  destruct H1 as [? [? ?]].
-  pose proof H9 H7.
-  unfold derives in H4.
-  apply H in H4.
-  unfold FOL_valid in H4.
-  simpl in H4.
-  specialize (H4 (st2, La)).
-  tauto.
+
+  (* EK_Normal *)
+  + specialize (H1 _ _ st2 H6).
+    destruct H1 as [? [? ?]].
+    pose proof H1 H7.
+    specialize (H2 (st2, La)).
+    tauto.
+
+  (* EK_Break *)
+  + specialize (H1 _ _ st2 H6).
+    destruct H1 as [? [? ?]].
+    pose proof H8 H7.
+    unfold derives in H3.
+    apply H in H3.
+    unfold FOL_valid in H3.
+    simpl in H3.
+    specialize (H3 (st2, La)).
+    tauto.
+
+  (* EK_Cont *)
+  + specialize (H1 _ _ st2 H6).
+    destruct H1 as [? [? ?]].
+    pose proof H9 H7.
+    unfold derives in H4.
+    apply H in H4.
+    unfold FOL_valid in H4.
+    simpl in H4.
+    specialize (H4 (st2, La)).
+    tauto.
 Qed.
 
 Theorem Hoare_logic_soundness: forall (T: FirstOrderLogic) (TS: FOL_sound T),
