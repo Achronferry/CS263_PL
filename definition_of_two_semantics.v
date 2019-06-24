@@ -126,7 +126,7 @@ Definition loop_sem3 (initial: state -> exit_kind -> state -> Prop) (b: bexp) (l
   : state -> exit_kind -> state -> Prop
 :=
   fun st1 ek st2 =>
-   exists st1',  (initial st1 EK_Normal st1') /\ (exists n, (iter_loop_body3 b loop_body (variant: state -> exit_kind -> state -> Prop) n) st1 st2) /\ ek = EK_Normal.
+   exists st1',  (initial st1 EK_Normal st1') /\ (exists n, (iter_loop_body3 b loop_body (variant: state -> exit_kind -> state -> Prop) n) st1' st2) /\ ek = EK_Normal.
 
 
 
