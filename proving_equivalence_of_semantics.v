@@ -347,17 +347,18 @@ Ltac induction_n1 H :=
              [intros b1 | intros b1 ?b1 b2 ? ? ?]
            end
       end
-  | multi_cstep (CNormal ?s, ?c1, ?st1) (CNormal ?s, ?c2, ?st2) =>
+
+  | multi_cstep ( ?c1, ?st1) ( ?c2, ?st2) =>
       match goal with
       | |- ?P =>
-           let Q := eval pattern s,c1, st1, c2, st2 in P in
+           let Q := eval pattern  c1, st1, c2, st2 in P in
            match Q with
-           | ?R s c1 st1 c2 st2 =>
-             revert s c1 c2 st1 st2 H;
-             refine (multi_cstep_ind_n1 R _ _);
-             [intros c1 st1 | intros c1 ?c1 c2 st1 ?st1 st2 ? ? ?]
+           | ?R  c1 st1 c2 st2 =>
+             revert c1 c2 st1 st2 H;
+             refine (multi_cstep_ind_1n R _ _);
+             [intros c1 st1 | intros s c1 ?c1 c2 st1 ?st1 st2 ? ? ?]
            end
-      end
+      end 
   end.
 
 Ltac induction_1n H :=
@@ -384,13 +385,13 @@ Ltac induction_1n H :=
              [intros b1 | intros b1 ?b1 b2 ? ? ?]
            end
       end
-  | multi_cstep (CNormal ?s ?c1, ?st1) (CNormal ?s ?c2, ?st2) =>
+  | multi_cstep ( ?c1, ?st1) ( ?c2, ?st2) =>
       match goal with
       | |- ?P =>
-           let Q := eval pattern s, c1, st1, c2, st2 in P in
+           let Q := eval pattern  c1, st1, c2, st2 in P in
            match Q with
-           | ?R s c1 st1 c2 st2 =>
-             revert s c1 c2 st1 st2 H;
+           | ?R  c1 st1 c2 st2 =>
+             revert c1 c2 st1 st2 H;
              refine (multi_cstep_ind_1n R _ _);
              [intros c1 st1 | intros s c1 ?c1 c2 st1 ?st1 st2 ? ? ?]
            end
