@@ -1206,7 +1206,15 @@ Proof.
   + inversion H;
     subst.
     - inversion H1.
-    - admit.
+    - remember ( (Dowhileloop c1 b c2 :: s0)%list) as L.
+      revert HeqL.
+      inversion H; intros; subst.
+      * inversion H1.
+      * 
+      * inversion HeqL.
+      * inversion HeqL.
+      * inversion H1.
+      * inversion HeqL.
     - admit.
     - inversion H1.
     - inversion H1.
