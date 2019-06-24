@@ -1193,6 +1193,16 @@ Proof.
   inversion H0.
 Qed.
 
+
+
+Lemma CSkip_step: forall st st' c s,
+  cstep(CNormal s CSkip, st) (CNormal s c, st') ->
+  c = CSkip /\ st = st'.
+Proof.
+  intros.
+  inversion H;subst;inversion H1.
+Qed.
+
 Lemma CSkip_halt: forall st st' c s,
   multi_cstep(CNormal s CSkip, st) (CNormal s c, st') ->
   c = CSkip /\ st = st'.
@@ -1200,18 +1210,18 @@ Proof.
   intros.
   remember (CNormal s Skip, st) as C'.
   remember (CNormal s c, st') as C''.
-  revert HeqC' HeqC'' .
+  revert HeqC' HeqC''.
   revert c s st st'.
   induction H; intros; split; subst.
   + inversion H;
     subst.
     - inversion H1.
-    - admit.
-    - admit.
+    - inversion H1.
+    - inversion H1.
     - inversion H1.
   + inversion H; subst.
     - reflexivity.
-    - admit.
+    - inversion H1.
     - reflexivity.
     - reflexivity.
   + inversion HeqC''.
@@ -1682,16 +1692,6 @@ Proof.
     - clear IH.
       inversion H2; subst.
       pose proof multi_cstep_trans_1n H H0.
-      
-      admit.
-    - admit.
-    - admit.
-    - admit.
-    - admit.
-    - admit.
-    - admit.
-    - admit.
-    - admit.
 Admitted.
 
 Lemma CIf_path_spec: forall b c1 c2 st1 st2 s,
@@ -2029,32 +2029,45 @@ Proof.
           pose proof H1 _ H2.
           tauto.
         }
-    - split.
-      * intros.
-        destruct H.
-        destruct H.
-        inversion H; admit.
-(*       revert H H0; induction x; intros.
-      - inversion H0.
-      - inversion H0.
-      - apply IHx1.
-          admit.
-          inversion H0.
-          exact H2.
-      - inversion H0.
-      - inversion H0.
-      -  *)
-      * admit.
-      (* 
-      inversion H0.
-      simpl.
-      unfold asgn_sem.
-      split.
-      exists CSkip.
-      intros.
-      destruct H.
-      apply CAss_path_spec in H.
-      inversion H0. *)
+    - split; intros.
+      * destruct H as [c [? ?]].
+        inversion H; subst.
+        {
+          inversion H1; subst.
+          + inversion H0.
+          + inversion H0.
+          + inversion H0; subst.
+            - inversion H1; subst.
+              * inversion H4.
+              * inversion H4.
+              * inversion H4.
+              * inversion H4.
+            - inversion H3.
+          + inversion H3.
+          + inversion H3.
+          + inversion H3.
+        }
+        { inversion H0. }
+        { admit. }
+      * destruct H as [c [? ?]].
+        inversion H; subst.
+        {
+          inversion H1; subst.
+          + inversion H0.
+          + inversion H0.
+          + inversion H0; subst.
+            - inversion H1; subst.
+              * inversion H4.
+              * inversion H4.
+              * inversion H4.
+              * inversion H4.
+            - inversion H3.
+          + inversion H3.
+          + inversion H3.
+          + inversion H3.
+        }
+        { inversion H0. }
+        { admit. }
  + split.
   - intros.
     apply CSeq_path_spec in H.
@@ -2068,17 +2081,13 @@ Proof.
     tauto.
   - split.
     * intros.
-      destruct H.
+      destruct H as [c [? ?]].
       simpl.
       unfold seq_sem.
       right.
       split.
+      { admit. }
       {
-        destruct H.
-        admit.
-      }
-      {
-        destruct H.
         inversion H0; unfold not; intros .
         discriminate H2.
         discriminate H3.
@@ -2219,14 +2228,6 @@ Admitted.
 
 (* ################################################################# *)
 (** * Final Theorem *)
-
-(* Theorem semantic_equiv_com2_trans: forall s c st1 st2,
-(exists c' : com, multi_cstep (CNormal s c, st1) (CNormal s c', st2) /\ start_with_break c' -> ceval c st1 EK_Break st2) ->
-((exists c' : com, multi_cstep (CNormal s c, st1) (CNormal s c', st2) /\ start_with_break c') -> ceval c st1 EK_Break st2).
-Proof.
-  intros.
-  destruct H.
-Admitted. *)
 
 Theorem semantic_equiv: forall s c st1 st2,
 (ceval c st1 EK_Normal st2 <->  multi_cstep (CNormal s c, st1) (CNormal s CSkip, st2))  /\
